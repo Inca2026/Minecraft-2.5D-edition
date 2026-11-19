@@ -1,2378 +1,297 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Paper Minecraft — Full Survival</title>
-<style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  }
-  body, html {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #121619;
-  }
-  canvas {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-    cursor: crosshair;
-  }
-
-  /* Top-Left HUD */
-  #hud-top-left {
-    position: fixed;
-    top: 14px;
-    left: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .stat-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .stat-bar-wrap {
-    width: 205px;
-    height: 22px;
-    background: rgba(20, 24, 28, 0.88);
-    border: 2px solid #3c464f;
-    border-radius: 6px;
-    padding: 2px;
-    position: relative;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-  }
-  .stat-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.15s ease;
-  }
-  #hp-fill { background: linear-gradient(90deg, #d63031, #ff7675); width: 100%; }
-  #hunger-fill { background: linear-gradient(90deg, #e17055, #fdcb6e); width: 100%; }
-  .stat-label {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 8px;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 800;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-  }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(20, 24, 28, 0.88);
-    border: 2px solid #3c464f;
-    color: #f5f6fa;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    width: fit-content;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-  }
-  #quest-box {
-    max-width: 280px;
-    background: rgba(20, 24, 28, 0.84);
-    border-left: 3px solid #ffd32a;
-    color: #dfe4ea;
-    padding: 6px 10px;
-    border-radius: 0 6px 6px 0;
-    font-size: 11px;
-    line-height: 1.35;
-  }
-
-  /* Boss Bar */
-  #boss-bar-wrap {
-    position: fixed;
-    top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 380px;
-    max-width: 80vw;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    z-index: 12;
-    pointer-events: none;
-  }
-  #boss-bar-wrap.active { display: flex; }
-  #boss-name {
-    color: #ff79c6;
-    font-weight: 900;
-    font-size: 13px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-shadow: 0 2px 4px #000;
-  }
-  #boss-bar-bg {
-    width: 100%;
-    height: 14px;
-    background: rgba(20, 14, 28, 0.9);
-    border: 2px solid #a29bfe;
-    border-radius: 7px;
-    padding: 2px;
-  }
-  #boss-bar-fill {
-    height: 100%;
-    width: 100%;
-    background: linear-gradient(90deg, #8e44ad, #ff79c6);
-    border-radius: 4px;
-    transition: width 0.15s;
-  }
-
-  /* Top-Right HUD */
-  #hud-top-right {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    z-index: 10;
-  }
-  #minimap {
-    width: 136px;
-    height: 136px;
-    border: 3px solid #3c464f;
-    border-radius: 8px;
-    background: #14181c;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  }
-  .hud-btn-group {
-    display: flex;
-    gap: 6px;
-  }
-  .hud-btn {
-    background: #2f3640;
-    color: #f5f6fa;
-    border: 2px solid #718093;
-    border-radius: 6px;
-    padding: 6px 11px;
-    font-weight: 700;
-    font-size: 12px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-    transition: background 0.15s, transform 0.1s;
-  }
-  .hud-btn:hover { background: #3d4652; transform: translateY(-1px); }
-
-  /* Hotbar */
-  #hotbar-wrap {
-    position: fixed;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    z-index: 10;
-  }
-  #selected-item-name {
-    color: #fff;
-    background: rgba(20, 24, 28, 0.8);
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 700;
-    min-height: 22px;
-  }
-  #hotbar {
-    display: flex;
-    gap: 5px;
-    background: rgba(20, 24, 28, 0.92);
-    padding: 6px;
-    border-radius: 10px;
-    border: 2px solid #485460;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.55);
-  }
-  .slot {
-    width: 50px;
-    height: 50px;
-    background: #2f3640;
-    border: 2px solid #57606f;
-    border-radius: 7px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: border-color 0.1s, transform 0.1s;
-  }
-  .slot:hover { border-color: #a4b0be; }
-  .slot.active {
-    border-color: #ffd32a;
-    background: #3d4652;
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(255, 211, 42, 0.3);
-  }
-  .slot-key {
-    position: absolute;
-    top: 2px;
-    left: 4px;
-    font-size: 10px;
-    color: #a4b0be;
-    font-weight: 700;
-  }
-  .slot-count {
-    position: absolute;
-    bottom: 2px;
-    right: 4px;
-    font-size: 11px;
-    color: #ffffff;
-    font-weight: 800;
-    text-shadow: 0 1px 2px #000;
-  }
-  .slot-icon {
-    font-size: 24px;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  /* Crafting & Backpack Modal */
-  #craft-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -52%);
-    width: 760px;
-    max-width: 95vw;
-    max-height: 80vh;
-    background: rgba(22, 27, 32, 0.97);
-    border: 2px solid #57606f;
-    border-radius: 12px;
-    padding: 18px;
-    color: #f5f6fa;
-    display: none;
-    grid-template-columns: 1.25fr 1fr;
-    gap: 18px;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.75);
-    z-index: 25;
-  }
-  #craft-modal.open { display: grid; }
-  .panel-title {
-    font-size: 14px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: #ffd32a;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .filter-tabs {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 8px;
-  }
-  .tab-btn {
-    background: #2f3640;
-    color: #ced6e0;
-    border: 1px solid #485460;
-    border-radius: 5px;
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .tab-btn.active {
-    background: #ffd32a;
-    color: #1e272e;
-    border-color: #ffd32a;
-  }
-  #recipe-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 55vh;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-  .recipe-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #2f3640;
-    border: 1px solid #485460;
-    border-radius: 7px;
-    padding: 7px 10px;
-    cursor: pointer;
-  }
-  .recipe-card.can-craft {
-    border-color: #2ed573;
-    background: #263830;
-  }
-  .recipe-card.can-craft:hover { background: #2f473c; }
-  .recipe-card.locked {
-    opacity: 0.52;
-    cursor: not-allowed;
-  }
-  .recipe-left {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-  .recipe-icon { font-size: 22px; }
-  .recipe-name { font-size: 12.5px; font-weight: 700; }
-  .recipe-desc { font-size: 10.5px; color: #ced6e0; }
-  .recipe-cost {
-    font-size: 11px;
-    font-weight: 700;
-    text-align: right;
-    color: #dfe4ea;
-  }
-
-  #backpack-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 50px);
-    gap: 5px;
-    justify-content: start;
-  }
-  .helper-tip {
-    margin-top: 10px;
-    font-size: 11px;
-    color: #b2bec3;
-    line-height: 1.45;
-    background: #1b2026;
-    padding: 9px;
-    border-radius: 6px;
-  }
-
-  /* Game Over & Victory Overlays */
-  #gameover-screen {
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 12, 16, 0.88);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    z-index: 50;
-    gap: 14px;
-  }
-  #gameover-screen.open { display: flex; }
-  #gameover-screen h1 { font-size: 42px; color: #ff6b6b; }
-  .overlay-btn {
-    padding: 11px 22px;
-    font-size: 15px;
-    font-weight: 700;
-    background: #2ed573;
-    color: #1e272e;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paper Minecraft 2.5D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<canvas id="game"></canvas>
+  <!-- Shared 2.5D Game Canvas (also renders animated panorama on Main Menu) -->
+  <canvas id="game-canvas"></canvas>
 
-<!-- Top-Left Vitals, Dimension & Progression -->
-<div id="hud-top-left">
-  <div class="stat-row">
-    <div class="stat-bar-wrap">
-      <div id="hp-fill" class="stat-fill"></div>
-      <div class="stat-label"><span>HEALTH</span><span id="hp-text">100 / 100</span></div>
+  <!-- ==================== MAIN MENU ==================== -->
+  <div id="screen-main-menu" class="menu-screen active">
+    <div class="title-logo-wrap">
+      <h1 class="mc-title">PAPER MINECRAFT</h1>
+      <div class="mc-subtitle">2.5D EDITION</div>
+      <div id="splash-text" class="splash-text">Now in 2.5D Pixel Art!</div>
     </div>
-    <div class="badge" id="armor-badge">🛡️ None</div>
-  </div>
-  <div class="stat-row">
-    <div class="stat-bar-wrap">
-      <div id="hunger-fill" class="stat-fill"></div>
-      <div class="stat-label"><span>HUNGER</span><span id="hunger-text">100 / 100</span></div>
+
+    <div class="menu-stack">
+      <button class="mc-btn" id="btn-goto-worlds">Singleplayer</button>
+      <button class="mc-btn" id="btn-goto-skin">Skin &amp; Profile</button>
+      <button class="mc-btn" id="btn-goto-options">Options...</button>
     </div>
-    <div class="badge" id="status-badge">🌲 Outdoors</div>
-  </div>
-  <div class="stat-row">
-    <div class="badge"><span id="time-icon">☀️</span><span id="day-text">Day 1 — Day</span></div>
-    <div class="badge" id="dim-badge">🌍 Overworld</div>
-  </div>
-  <div id="quest-box">🎯 <b>Goal:</b> Chop trees, craft a Wood Pickaxe & Shelter, then descend a Cave for Iron & Diamonds!</div>
-</div>
 
-<!-- Boss Bar (Warden / Ender Dragon) -->
-<div id="boss-bar-wrap">
-  <div id="boss-name">ENDER DRAGON</div>
-  <div id="boss-bar-bg"><div id="boss-bar-fill"></div></div>
-</div>
-
-<!-- Top-Right Minimap & Controls -->
-<div id="hud-top-right">
-  <canvas id="minimap" width="136" height="136"></canvas>
-  <div class="hud-btn-group">
-    <button class="hud-btn" id="toggle-craft-btn">🔨 Craft [E]</button>
-    <button class="hud-btn" id="save-btn">💾 Save</button>
-    <button class="hud-btn" id="reset-btn" title="Delete save and generate new world">🔄 New</button>
-  </div>
-</div>
-
-<!-- Bottom Hotbar -->
-<div id="hotbar-wrap">
-  <div id="selected-item-name">Hand</div>
-  <div id="hotbar"></div>
-</div>
-
-<!-- Crafting, Smelting & Backpack Modal -->
-<div id="craft-modal">
-  <div>
-    <div class="panel-title">
-      <span>Crafting & Smelting</span>
-      <span id="furnace-status" style="font-size:11px;color:#a4b0be;"></span>
-    </div>
-    <div class="filter-tabs">
-      <button class="tab-btn active" data-cat="all">All</button>
-      <button class="tab-btn" data-cat="tools">Tools & Gear</button>
-      <button class="tab-btn" data-cat="build">Shelter</button>
-      <button class="tab-btn" data-cat="smelt">Smelt</button>
-      <button class="tab-btn" data-cat="portals">Portals</button>
-    </div>
-    <div id="recipe-list"></div>
-  </div>
-  <div>
-    <div class="panel-title"><span>Backpack</span><span style="font-size:11px;color:#a4b0be;">Click to Swap</span></div>
-    <div id="backpack-grid"></div>
-    <div class="helper-tip">
-      <b>Paper Minecraft Guide:</b><br>
-      • <b>Left-Click:</b> Mine, chop, attack, shoot Bow, eat food, or place blocks.<br>
-      • <b>Right-Click:</b> Open/close Doors, enter Caves & Portals, sleep in Beds at night, or reclaim placed structures.<br>
-      • <b>Shelter & Roofs:</b> Build Walls + a Door + <b>Roof</b> tiles to gain the <b>Sheltered</b> buff (regenerates HP & blocks spawns).<br>
-      • <b>Progression:</b> Overworld → Caves & Deep Dark (Warden) → Nether (Blazes) → The End (Ender Dragon).
+    <div class="menu-footer">
+      <span>Playing as: <strong id="menu-username-label">Steve</strong></span>
+      <span>GitHub Pages Ready • 2.5D Web Engine</span>
     </div>
   </div>
-</div>
 
-<!-- Death Screen -->
-<div id="gameover-screen">
-  <h1>You Died!</h1>
-  <p id="survival-summary">Survived 1 Day</p>
-  <div style="display:flex;gap:12px;">
-    <button class="overlay-btn" id="respawn-btn">Respawn at Bed / Spawn</button>
-    <button class="overlay-btn" style="background:#ff7675;" id="hard-reset-btn">New World</button>
+  <!-- ==================== SELECT WORLD SCREEN ==================== -->
+  <div id="screen-worlds" class="menu-screen">
+    <div class="mc-panel wide-panel">
+      <h2 class="panel-header">Select World</h2>
+      <div id="world-list" class="world-list"></div>
+      <div class="btn-row">
+        <button class="mc-btn green-btn" id="btn-play-selected" disabled>Play Selected World</button>
+        <button class="mc-btn" id="btn-open-create-world">Create New World</button>
+      </div>
+      <div class="btn-row">
+        <button class="mc-btn" id="btn-edit-world" disabled>World Settings</button>
+        <button class="mc-btn red-btn" id="btn-delete-world" disabled>Delete</button>
+        <button class="mc-btn" id="btn-worlds-back">Cancel</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<script>
-(() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const miniCanvas = document.getElementById('minimap');
-  const miniCtx = miniCanvas.getContext('2d');
-  const lightCanvas = document.createElement('canvas');
-  const lightCtx = lightCanvas.getContext('2d');
+  <!-- ==================== CREATE / EDIT WORLD SCREEN ==================== -->
+  <div id="screen-create-world" class="menu-screen">
+    <div class="mc-panel">
+      <h2 class="panel-header" id="create-world-title">Create New World</h2>
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    lightCanvas.width = canvas.width;
-    lightCanvas.height = canvas.height;
-  }
-  window.addEventListener('resize', resize);
-  resize();
+      <div class="form-group">
+        <label for="input-world-name">World Name</label>
+        <input type="text" id="input-world-name" class="mc-input" maxlength="28" value="New Survival World" />
+      </div>
 
-  // --- CONSTANTS ---
-  const WORLD_SIZE = 60;
-  const TILE_SIZE = 44;
-  const SAVE_KEY = 'paper_minecraft_save_v1';
+      <div class="form-row">
+        <div class="form-group">
+          <label>Game Mode</label>
+          <button class="mc-btn small-btn" id="btn-toggle-gamemode">Mode: Survival</button>
+        </div>
+        <div class="form-group">
+          <label>Difficulty</label>
+          <button class="mc-btn small-btn" id="btn-toggle-difficulty">Difficulty: Normal</button>
+        </div>
+      </div>
 
-  const TERRAIN = {
-    WATER: 0,
-    SAND: 1,
-    GRASS: 2,
-    FOREST_GRASS: 3,
-    SNOW: 4,
-    FLOOR_WOOD: 5,
-    STONE_FLOOR: 6,
-    DEEPSLATE: 7,
-    SCULK: 8,
-    NETHERRACK: 9,
-    LAVA: 10,
-    END_STONE: 11,
-    VOID: 12
-  };
+      <div class="form-group">
+        <label for="input-world-seed">Seed for the World Generator (Leave blank for random)</label>
+        <input type="text" id="input-world-seed" class="mc-input" maxlength="24" placeholder="e.g. 42069 or DeepDark" />
+      </div>
 
-  const OBJ = {
-    NONE: 0,
-    TREE: 1,
-    PINE_TREE: 2,
-    CACTUS: 3,
-    ROCK: 4,
-    COAL_ORE: 5,
-    IRON_ORE: 6,
-    GOLD_ORE: 7,
-    DIAMOND_ORE: 8,
-    OBSIDIAN: 9,
-    QUARTZ_ORE: 10,
-    ANCIENT_DEBRIS: 11,
-    BERRY_BUSH: 12,
-    STUMP: 13,
-    WALL_WOOD: 14,
-    WALL_STONE: 15,
-    DOOR_WOOD: 16,
-    FURNACE: 17,
-    CAMPFIRE: 18,
-    TORCH: 19,
-    BED: 20,
-    CAVE_DOWN: 21,
-    CAVE_UP: 22,
-    NETHER_PORTAL: 23,
-    END_PORTAL: 24,
-    END_CRYSTAL: 25,
-    SCULK_SENSOR: 26,
-    ANCIENT_CHEST: 27
-  };
+      <div class="form-row">
+        <div class="form-group">
+          <label>Bonus Starter Chest</label>
+          <button class="mc-btn small-btn" id="btn-toggle-bonus">Bonus Chest: OFF</button>
+        </div>
+        <div class="form-group">
+          <label>Keep Inventory</label>
+          <button class="mc-btn small-btn" id="btn-toggle-keepinv">Keep Inventory: OFF</button>
+        </div>
+      </div>
 
-  const ITEMS = {
-    // Materials
-    wood:            { name: 'Oak/Pine Log',     icon: '🪵', type: 'mat', stack: 99 },
-    planks:          { name: 'Wood Planks',      icon: '🟫', type: 'mat', stack: 99 },
-    sticks:          { name: 'Sticks',           icon: '🥢', type: 'mat', stack: 99 },
-    cobble:          { name: 'Cobblestone',      icon: '🪨', type: 'mat', stack: 99 },
-    sand:            { name: 'Sand',             icon: '🏜️', type: 'mat', stack: 99 },
-    glass:           { name: 'Glass',            icon: '🪟', type: 'mat', stack: 99 },
-    coal:            { name: 'Coal',             icon: '⚫', type: 'mat', stack: 99 },
-    iron_ore:        { name: 'Raw Iron',         icon: '🥔', type: 'mat', stack: 99 },
-    iron_ingot:      { name: 'Iron Ingot',       icon: '⛓️', type: 'mat', stack: 99 },
-    gold_ore:        { name: 'Raw Gold',         icon: '🟡', type: 'mat', stack: 99 },
-    gold_ingot:      { name: 'Gold Ingot',       icon: '🪙', type: 'mat', stack: 99 },
-    diamond:         { name: 'Diamond',          icon: '💎', type: 'mat', stack: 99 },
-    obsidian:        { name: 'Obsidian',         icon: '🟪', type: 'mat', stack: 99 },
-    quartz:          { name: 'Nether Quartz',    icon: '🤍', type: 'mat', stack: 99 },
-    ancient_debris:  { name: 'Ancient Debris',   icon: '🟤', type: 'mat', stack: 99 },
-    netherite_scrap: { name: 'Netherite Scrap',  icon: '🔩', type: 'mat', stack: 99 },
-    netherite_ingot: { name: 'Netherite Ingot',  icon: '⬛', type: 'mat', stack: 99 },
-    leather:         { name: 'Leather',          icon: '🧣', type: 'mat', stack: 99 },
-    wool:            { name: 'Wool',             icon: '☁️', type: 'mat', stack: 99 },
-    blaze_rod:       { name: 'Blaze Rod',        icon: '🔥', type: 'mat', stack: 99 },
-    blaze_powder:    { name: 'Blaze Powder',     icon: '✨', type: 'mat', stack: 99 },
-    ender_pearl:     { name: 'Ender Pearl',      icon: '🟢', type: 'mat', stack: 99 },
-    eye_of_ender:    { name: 'Eye of Ender',     icon: '👁️', type: 'mat', stack: 99 },
-    dragon_egg:      { name: 'Dragon Egg',       icon: '🥚', type: 'mat', stack: 1 },
+      <div class="btn-row" style="margin-top: 14px;">
+        <button class="mc-btn green-btn" id="btn-confirm-create-world">Create New World</button>
+        <button class="mc-btn" id="btn-cancel-create-world">Cancel</button>
+      </div>
+    </div>
+  </div>
 
-    // Food
-    apple:           { name: 'Apple',            icon: '🍎', type: 'food', hunger: 20, heal: 8, stack: 99 },
-    berries:         { name: 'Sweet Berries',    icon: '🫐', type: 'food', hunger: 12, heal: 4, stack: 99 },
-    raw_meat:        { name: 'Raw Beef/Pork',    icon: '🥩', type: 'food', hunger: 15, heal: 3, stack: 99 },
-    cooked_meat:     { name: 'Steak / Porkchop', icon: '🍖', type: 'food', hunger: 45, heal: 22, stack: 99 },
-    golden_apple:    { name: 'Golden Apple',     icon: '🍏', type: 'food', hunger: 60, heal: 65, stack: 99 },
+  <!-- ==================== SKIN & PROFILE CUSTOMIZER ==================== -->
+  <div id="screen-skin" class="menu-screen">
+    <div class="mc-panel wide-panel">
+      <h2 class="panel-header">Customize Skin &amp; Profile</h2>
 
-    // Tools & Weapons
-    wood_pick:       { name: 'Wood Pickaxe',     icon: '⛏️', type: 'tool', toolType: 'pick', tier: 1, power: 2.0, dmg: 12, stack: 1 },
-    wood_axe:        { name: 'Wood Axe',         icon: '🪓', type: 'tool', toolType: 'axe',  tier: 1, power: 2.4, dmg: 15, stack: 1 },
-    stone_pick:      { name: 'Stone Pickaxe',    icon: '⚒️', type: 'tool', toolType: 'pick', tier: 2, power: 3.2, dmg: 15, stack: 1 },
-    stone_sword:     { name: 'Stone Sword',      icon: '🗡️', type: 'tool', toolType: 'sword',tier: 2, power: 1.2, dmg: 26, stack: 1 },
-    bow:             { name: 'Hunter Bow',       icon: '🏹', type: 'bow',  dmg: 24, stack: 1 },
-    iron_pick:       { name: 'Iron Pickaxe',     icon: '🔨', type: 'tool', toolType: 'pick', tier: 3, power: 4.8, dmg: 18, stack: 1 },
-    iron_sword:      { name: 'Iron Sword',       icon: '⚔️', type: 'tool', toolType: 'sword',tier: 3, power: 1.4, dmg: 38, stack: 1 },
-    diamond_pick:    { name: 'Diamond Pickaxe',  icon: '💠', type: 'tool', toolType: 'pick', tier: 4, power: 7.0, dmg: 22, stack: 1 },
-    diamond_sword:   { name: 'Diamond Sword',    icon: '🔪', type: 'tool', toolType: 'sword',tier: 4, power: 1.6, dmg: 54, stack: 1 },
-    netherite_sword: { name: 'Netherite Sword',  icon: '🔱', type: 'tool', toolType: 'sword',tier: 5, power: 2.0, dmg: 76, stack: 1 },
+      <div class="skin-editor-grid">
+        <div class="skin-preview-box">
+          <canvas id="skin-preview-canvas" width="160" height="190"></canvas>
+          <div class="skin-presets" id="skin-presets"></div>
+        </div>
 
-    // Armor (Click in hotbar to equip!)
-    leather_armor:   { name: 'Leather Tunic',    icon: '🦺', type: 'armor', defense: 0.22, stack: 1 },
-    iron_armor:      { name: 'Iron Chestplate',  icon: '🛡️', type: 'armor', defense: 0.45, stack: 1 },
-    diamond_armor:   { name: 'Diamond Armor',    icon: '🧥', type: 'armor', defense: 0.65, stack: 1 },
-    netherite_armor: { name: 'Netherite Armor',  icon: '🦾', type: 'armor', defense: 0.80, stack: 1 },
+        <div class="skin-controls">
+          <div class="form-group">
+            <label for="input-username">In-Game Username</label>
+            <input type="text" id="input-username" class="mc-input" maxlength="16" value="Steve" />
+          </div>
 
-    // Placeables
-    wood_wall:       { name: 'Wood Wall',        icon: '🧱', type: 'place', placeObj: OBJ.WALL_WOOD, stack: 99 },
-    stone_wall:      { name: 'Stone Wall',       icon: '🏰', type: 'place', placeObj: OBJ.WALL_STONE, stack: 99 },
-    wood_door:       { name: 'Wood Door',        icon: '🚪', type: 'place', placeObj: OBJ.DOOR_WOOD, stack: 99 },
-    wood_floor:      { name: 'Wood Floor',       icon: '🟨', type: 'place', placeTerrain: TERRAIN.FLOOR_WOOD, stack: 99 },
-    wood_roof:       { name: 'Wood Roof',        icon: '🛖', type: 'place', placeRoof: true, stack: 99 },
-    furnace:         { name: 'Furnace',          icon: '🏭', type: 'place', placeObj: OBJ.FURNACE, stack: 99 },
-    campfire:        { name: 'Campfire',         icon: '🔥', type: 'place', placeObj: OBJ.CAMPFIRE, stack: 99 },
-    torch:           { name: 'Torch',            icon: '🕯️', type: 'place', placeObj: OBJ.TORCH, stack: 99 },
-    bed:             { name: 'Cozy Bed',         icon: '🛏️', type: 'place', placeObj: OBJ.BED, stack: 99 },
-    cave_ladder:     { name: 'Mine Shaft',       icon: '🪜', type: 'place', placeObj: OBJ.CAVE_DOWN, stack: 99 },
-    nether_portal:   { name: 'Nether Portal',    icon: '🟣', type: 'place', placeObj: OBJ.NETHER_PORTAL, stack: 99 },
-    end_portal:      { name: 'End Portal',       icon: '🌌', type: 'place', placeObj: OBJ.END_PORTAL, stack: 99 }
-  };
-
-  const RECIPES = [
-    // Basics & Tools
-    { out: 'planks',          count: 4, cat: 'tools', cost: { wood: 1 },                    desc: 'Basic building lumber' },
-    { out: 'sticks',          count: 4, cat: 'tools', cost: { planks: 2 },                  desc: 'Tool & torch handles' },
-    { out: 'wood_pick',       count: 1, cat: 'tools', cost: { planks: 3, sticks: 2 },       desc: 'Tier 1: Mines Stone & Coal' },
-    { out: 'wood_axe',        count: 1, cat: 'tools', cost: { planks: 3, sticks: 2 },       desc: 'Chops trees rapidly' },
-    { out: 'stone_pick',      count: 1, cat: 'tools', cost: { cobble: 3, sticks: 2 },       desc: 'Tier 2: Mines Iron Ore' },
-    { out: 'stone_sword',     count: 1, cat: 'tools', cost: { cobble: 2, sticks: 1 },       desc: '26 Melee Damage' },
-    { out: 'bow',             count: 1, cat: 'tools', cost: { sticks: 3, wool: 2 },         desc: 'Fires unlimited arrows' },
-    { out: 'leather_armor',   count: 1, cat: 'tools', cost: { leather: 4 },                 desc: '22% Damage Reduction' },
-    { out: 'iron_pick',       count: 1, cat: 'tools', cost: { iron_ingot: 3, sticks: 2 },   desc: 'Tier 3: Mines Gold & Diamond' },
-    { out: 'iron_sword',      count: 1, cat: 'tools', cost: { iron_ingot: 2, sticks: 1 },   desc: '38 Melee Damage' },
-    { out: 'iron_armor',      count: 1, cat: 'tools', cost: { iron_ingot: 5 },              desc: '45% Damage Reduction' },
-    { out: 'diamond_pick',    count: 1, cat: 'tools', cost: { diamond: 3, sticks: 2 },      desc: 'Tier 4: Mines Obsidian & Debris' },
-    { out: 'diamond_sword',   count: 1, cat: 'tools', cost: { diamond: 2, sticks: 1 },      desc: '54 Melee Damage' },
-    { out: 'diamond_armor',   count: 1, cat: 'tools', cost: { diamond: 5 },                 desc: '65% Damage Reduction' },
-    { out: 'netherite_ingot', count: 1, cat: 'tools', cost: { netherite_scrap: 2, gold_ingot: 2 }, desc: 'Ancient alloy' },
-    { out: 'netherite_sword', count: 1, cat: 'tools', cost: { diamond_sword: 1, netherite_ingot: 1 }, desc: '76 Melee Damage' },
-    { out: 'netherite_armor', count: 1, cat: 'tools', cost: { diamond_armor: 1, netherite_ingot: 1 }, desc: '80% Damage Reduction' },
-    { out: 'golden_apple',    count: 1, cat: 'tools', cost: { apple: 1, gold_ingot: 4 },    desc: 'Heals +65 HP & +60 Hunger' },
-
-    // Shelter & Base Building
-    { out: 'wood_wall',       count: 2, cat: 'build', cost: { planks: 4 },                  desc: 'Solid wooden wall' },
-    { out: 'stone_wall',      count: 2, cat: 'build', cost: { cobble: 4 },                  desc: 'Blast-resistant wall' },
-    { out: 'wood_door',       count: 1, cat: 'build', cost: { planks: 4 },                  desc: 'Right-click to open/close' },
-    { out: 'wood_floor',      count: 2, cat: 'build', cost: { planks: 2 },                  desc: 'Warm interior flooring' },
-    { out: 'wood_roof',       count: 2, cat: 'build', cost: { planks: 3 },                  desc: 'Grants Sheltered buff!' },
-    { out: 'furnace',         count: 1, cat: 'build', cost: { cobble: 8 },                  desc: 'Unlocks Smelting nearby' },
-    { out: 'bed',             count: 1, cat: 'build', cost: { planks: 3, wool: 3 },         desc: 'Skip night & set spawn' },
-    { out: 'campfire',        count: 1, cat: 'build', cost: { wood: 3, coal: 1 },           desc: 'Bright light & HP regen' },
-    { out: 'torch',           count: 4, cat: 'build', cost: { sticks: 1, coal: 1 },         desc: 'Wall/ground light source' },
-
-    // Smelting (Requires Furnace nearby)
-    { out: 'iron_ingot',      count: 1, cat: 'smelt', needFurnace: true, cost: { iron_ore: 1 },       desc: 'Smelt Raw Iron' },
-    { out: 'gold_ingot',      count: 1, cat: 'smelt', needFurnace: true, cost: { gold_ore: 1 },       desc: 'Smelt Raw Gold' },
-    { out: 'cooked_meat',     count: 1, cat: 'smelt', needFurnace: true, cost: { raw_meat: 1 },       desc: 'Cook Steak (+45 Hunger)' },
-    { out: 'glass',           count: 1, cat: 'smelt', needFurnace: true, cost: { sand: 1 },           desc: 'Smelt Sand into Glass' },
-    { out: 'netherite_scrap', count: 1, cat: 'smelt', needFurnace: true, cost: { ancient_debris: 1 }, desc: 'Smelt Ancient Debris' },
-
-    // Dimensions & Portals
-    { out: 'cave_ladder',     count: 1, cat: 'portals', cost: { planks: 6, sticks: 4 },     desc: 'Digs a ladder into Caves' },
-    { out: 'nether_portal',   count: 1, cat: 'portals', cost: { obsidian: 6, iron_ingot: 1 }, desc: 'Gateway to The Nether' },
-    { out: 'blaze_powder',    count: 2, cat: 'portals', cost: { blaze_rod: 1 },             desc: 'Alchemical Nether fuel' },
-    { out: 'eye_of_ender',    count: 1, cat: 'portals', cost: { ender_pearl: 1, blaze_powder: 1 }, desc: 'Key to The End' },
-    { out: 'end_portal',      count: 1, cat: 'portals', cost: { eye_of_ender: 4, obsidian: 4 }, desc: 'Gateway to Ender Dragon' }
-  ];
-
-  // --- MULTI-DIMENSION WORLD STATE ---
-  const dims = {};
-  let currentDim = 'overworld';
-
-  function createEmptyGrid(val) {
-    return Array.from({ length: WORLD_SIZE }, () => Array(WORLD_SIZE).fill(val));
-  }
-
-  function setDimObject(dim, tx, ty, type, state = 0) {
-    dim.objects[ty][tx] = type;
-    dim.objState[ty][tx] = state;
-    const hpMap = {
-      [OBJ.TREE]: 35, [OBJ.PINE_TREE]: 35, [OBJ.CACTUS]: 20, [OBJ.STUMP]: 18,
-      [OBJ.ROCK]: 45, [OBJ.COAL_ORE]: 55, [OBJ.IRON_ORE]: 75, [OBJ.GOLD_ORE]: 95,
-      [OBJ.DIAMOND_ORE]: 130, [OBJ.OBSIDIAN]: 200, [OBJ.QUARTZ_ORE]: 65,
-      [OBJ.ANCIENT_DEBRIS]: 180, [OBJ.BERRY_BUSH]: 12,
-      [OBJ.WALL_WOOD]: 90, [OBJ.WALL_STONE]: 220, [OBJ.DOOR_WOOD]: 80,
-      [OBJ.FURNACE]: 100, [OBJ.CAMPFIRE]: 60, [OBJ.TORCH]: 15, [OBJ.BED]: 50,
-      [OBJ.END_CRYSTAL]: 40, [OBJ.SCULK_SENSOR]: 30, [OBJ.ANCIENT_CHEST]: 25
-    };
-    const hp = hpMap[type] || 0;
-    dim.objHp[ty][tx] = hp;
-    dim.objMaxHp[ty][tx] = hp;
-  }
-
-  function generateWorlds() {
-    const cx = Math.floor(WORLD_SIZE / 2);
-    const cy = Math.floor(WORLD_SIZE / 2);
-
-    // 1. OVERWORLD (Biomes: Plains, Forest, Desert, Snow)
-    const ow = {
-      name: 'Overworld',
-      terrain: createEmptyGrid(TERRAIN.GRASS),
-      objects: createEmptyGrid(OBJ.NONE),
-      roof: createEmptyGrid(false),
-      objHp: createEmptyGrid(0),
-      objMaxHp: createEmptyGrid(0),
-      objState: createEmptyGrid(0),
-      objShake: createEmptyGrid(0),
-      mobs: []
-    };
-
-    for (let y = 0; y < WORLD_SIZE; y++) {
-      for (let x = 0; x < WORLD_SIZE; x++) {
-        if (x <= 1 || y <= 1 || x >= WORLD_SIZE - 2 || y >= WORLD_SIZE - 2) {
-          ow.terrain[y][x] = TERRAIN.WATER;
-          continue;
-        }
-        const temp = Math.sin(x * 0.11) + Math.cos(y * 0.09);
-        const moist = Math.cos(x * 0.08 - y * 0.1);
-        const distSpawn = Math.hypot(x - cx, y - cy);
-
-        if (distSpawn < 5) {
-          ow.terrain[y][x] = TERRAIN.GRASS;
-        } else if (Math.hypot(x - 14, y - 15) < 4.5 || Math.hypot(x - 45, y - 44) < 5) {
-          ow.terrain[y][x] = TERRAIN.WATER;
-        } else if (temp > 0.75) {
-          ow.terrain[y][x] = TERRAIN.SAND;
-        } else if (temp < -0.75) {
-          ow.terrain[y][x] = TERRAIN.SNOW;
-        } else if (moist > 0.35) {
-          ow.terrain[y][x] = TERRAIN.FOREST_GRASS;
-        } else {
-          ow.terrain[y][x] = TERRAIN.GRASS;
-        }
-
-        if (distSpawn < 4) continue;
-        const r = Math.random();
-        const t = ow.terrain[y][x];
-        if (t === TERRAIN.GRASS) {
-          if (r < 0.08) setDimObject(ow, x, y, OBJ.TREE);
-          else if (r < 0.12) setDimObject(ow, x, y, OBJ.ROCK);
-          else if (r < 0.14) setDimObject(ow, x, y, OBJ.COAL_ORE);
-          else if (r < 0.16) setDimObject(ow, x, y, OBJ.BERRY_BUSH);
-        } else if (t === TERRAIN.FOREST_GRASS) {
-          if (r < 0.22) setDimObject(ow, x, y, OBJ.TREE);
-          else if (r < 0.25) setDimObject(ow, x, y, OBJ.BERRY_BUSH);
-          else if (r < 0.27) setDimObject(ow, x, y, OBJ.ROCK);
-        } else if (t === TERRAIN.SNOW) {
-          if (r < 0.14) setDimObject(ow, x, y, OBJ.PINE_TREE);
-          else if (r < 0.18) setDimObject(ow, x, y, OBJ.COAL_ORE);
-        } else if (t === TERRAIN.SAND) {
-          if (r < 0.07) setDimObject(ow, x, y, OBJ.CACTUS);
-          else if (r < 0.10) setDimObject(ow, x, y, OBJ.ROCK);
-        }
-      }
-    }
-
-    // Place 3 natural Cave Entrances in Overworld
-    const caveSpots = [
-      { x: cx + 7, y: cy - 5 },
-      { x: 16, y: 40 },
-      { x: 44, y: 16 }
-    ];
-    for (const cs of caveSpots) {
-      ow.terrain[cs.y][cs.x] = TERRAIN.GRASS;
-      setDimObject(ow, cs.x, cs.y, OBJ.CAVE_DOWN);
-    }
-
-    // 2. CAVES & DEEP DARK DIMENSION
-    const caves = {
-      name: 'Caves & Deep Dark',
-      terrain: createEmptyGrid(TERRAIN.STONE_FLOOR),
-      objects: createEmptyGrid(OBJ.NONE),
-      roof: createEmptyGrid(false),
-      objHp: createEmptyGrid(0),
-      objMaxHp: createEmptyGrid(0),
-      objState: createEmptyGrid(0),
-      objShake: createEmptyGrid(0),
-      mobs: []
-    };
-
-    for (let y = 0; y < WORLD_SIZE; y++) {
-      for (let x = 0; x < WORLD_SIZE; x++) {
-        const isDeepDark = y > 37;
-        caves.terrain[y][x] = isDeepDark ? TERRAIN.DEEPSLATE : TERRAIN.STONE_FLOOR;
-
-        if (x <= 1 || y <= 1 || x >= WORLD_SIZE - 2 || y >= WORLD_SIZE - 2) {
-          setDimObject(caves, x, y, OBJ.ROCK);
-          continue;
-        }
-        // Carve cavern rooms using trig noise
-        const caveOpen = Math.sin(x * 0.22) * Math.cos(y * 0.22) + Math.sin((x + y) * 0.12);
-        if (caveOpen < -0.55) {
-          setDimObject(caves, x, y, OBJ.ROCK);
-          continue;
-        }
-
-        const r = Math.random();
-        if (isDeepDark) {
-          if (r < 0.22) caves.terrain[y][x] = TERRAIN.SCULK;
-          if (r < 0.03) setDimObject(caves, x, y, OBJ.SCULK_SENSOR);
-          else if (r < 0.055) setDimObject(caves, x, y, OBJ.DIAMOND_ORE);
-          else if (r < 0.068) setDimObject(caves, x, y, OBJ.ANCIENT_CHEST);
-        } else {
-          if (r < 0.045) setDimObject(caves, x, y, OBJ.COAL_ORE);
-          else if (r < 0.085) setDimObject(caves, x, y, OBJ.IRON_ORE);
-          else if (r < 0.105) setDimObject(caves, x, y, OBJ.GOLD_ORE);
-          else if (r < 0.12) setDimObject(caves, x, y, OBJ.DIAMOND_ORE);
-          else if (r < 0.132) {
-            caves.terrain[y][x] = TERRAIN.LAVA;
-          } else if (r < 0.145) {
-            setDimObject(caves, x, y, OBJ.OBSIDIAN);
-          }
-        }
-      }
-    }
-
-    // Link Cave Ladders & Ancient City Center
-    for (const cs of caveSpots) {
-      clearSafeArea(caves, cs.x, cs.y, 2, TERRAIN.STONE_FLOOR);
-      setDimObject(caves, cs.x, cs.y, OBJ.CAVE_UP);
-    }
-    clearSafeArea(caves, 30, 48, 4, TERRAIN.SCULK);
-    setDimObject(caves, 30, 48, OBJ.ANCIENT_CHEST);
-    setDimObject(caves, 28, 47, OBJ.SCULK_SENSOR);
-    setDimObject(caves, 32, 47, OBJ.SCULK_SENSOR);
-
-    // 3. THE NETHER DIMENSION
-    const nether = {
-      name: 'The Nether',
-      terrain: createEmptyGrid(TERRAIN.NETHERRACK),
-      objects: createEmptyGrid(OBJ.NONE),
-      roof: createEmptyGrid(false),
-      objHp: createEmptyGrid(0),
-      objMaxHp: createEmptyGrid(0),
-      objState: createEmptyGrid(0),
-      objShake: createEmptyGrid(0),
-      mobs: []
-    };
-
-    for (let y = 0; y < WORLD_SIZE; y++) {
-      for (let x = 0; x < WORLD_SIZE; x++) {
-        if (x <= 1 || y <= 1 || x >= WORLD_SIZE - 2 || y >= WORLD_SIZE - 2) {
-          nether.terrain[y][x] = TERRAIN.LAVA;
-          continue;
-        }
-        const lavaNoise = Math.sin(x * 0.16) + Math.cos(y * 0.16);
-        if (lavaNoise > 1.15) {
-          nether.terrain[y][x] = TERRAIN.LAVA;
-          continue;
-        }
-        const r = Math.random();
-        if (r < 0.05) setDimObject(nether, x, y, OBJ.QUARTZ_ORE);
-        else if (r < 0.068) setDimObject(nether, x, y, OBJ.ANCIENT_DEBRIS);
-        else if (r < 0.09) setDimObject(nether, x, y, OBJ.OBSIDIAN);
-      }
-    }
-
-    // 4. THE END DIMENSION
-    const end = {
-      name: 'The End',
-      terrain: createEmptyGrid(TERRAIN.VOID),
-      objects: createEmptyGrid(OBJ.NONE),
-      roof: createEmptyGrid(false),
-      objHp: createEmptyGrid(0),
-      objMaxHp: createEmptyGrid(0),
-      objState: createEmptyGrid(0),
-      objShake: createEmptyGrid(0),
-      mobs: []
-    };
-
-    for (let y = 0; y < WORLD_SIZE; y++) {
-      for (let x = 0; x < WORLD_SIZE; x++) {
-        const d = Math.hypot(x - cx, y - cy);
-        if (d < 18 + Math.sin(x * 0.4) * 1.5) {
-          end.terrain[y][x] = TERRAIN.END_STONE;
-        }
-      }
-    }
-    // 4 Obsidian Pillars with End Crystals
-    const pillars = [
-      { x: cx - 8, y: cy - 8 },
-      { x: cx + 8, y: cy - 8 },
-      { x: cx - 8, y: cy + 8 },
-      { x: cx + 8, y: cy + 8 }
-    ];
-    for (const p of pillars) {
-      end.terrain[p.y][p.x] = TERRAIN.END_STONE;
-      setDimObject(end, p.x, p.y, OBJ.END_CRYSTAL);
-    }
-    // Return End Portal & Ender Dragon
-    clearSafeArea(end, cx, cy + 13, 2, TERRAIN.END_STONE);
-    setDimObject(end, cx, cy + 13, OBJ.END_PORTAL);
-    end.mobs.push({
-      kind: 'ender_dragon',
-      x: cx * TILE_SIZE,
-      y: (cy - 4) * TILE_SIZE,
-      vx: 0, vy: 0,
-      radius: 26,
-      hp: 450,
-      maxHp: 450,
-      speed: 125,
-      timer: 0,
-      boss: true
-    });
-
-    dims.overworld = ow;
-    dims.caves = caves;
-    dims.nether = nether;
-    dims.end = end;
-  }
-
-  function clearSafeArea(dim, tx, ty, radius, floorType) {
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        const nx = tx + dx, ny = ty + dy;
-        if (nx > 1 && ny > 1 && nx < WORLD_SIZE - 2 && ny < WORLD_SIZE - 2) {
-          dim.terrain[ny][nx] = floorType;
-          dim.objects[ny][nx] = OBJ.NONE;
-        }
-      }
-    }
-  }
-
-  generateWorlds();
-
-  // --- PLAYER, INVENTORY & SAVE SYSTEM ---
-  const TOTAL_SLOTS = 24; // 0..8 Hotbar, 9..23 Backpack
-  let inventory = Array(TOTAL_SLOTS).fill(null);
-
-  const spawnTile = { x: Math.floor(WORLD_SIZE / 2), y: Math.floor(WORLD_SIZE / 2) };
-  const player = {
-    x: (spawnTile.x + 0.5) * TILE_SIZE,
-    y: (spawnTile.y + 0.5) * TILE_SIZE,
-    spawnDim: 'overworld',
-    spawnX: (spawnTile.x + 0.5) * TILE_SIZE,
-    spawnY: (spawnTile.y + 0.5) * TILE_SIZE,
-    radius: 14,
-    speed: 195,
-    hp: 100,
-    maxHp: 100,
-    hunger: 100,
-    maxHunger: 100,
-    armor: null,
-    selectedSlot: 0,
-    angle: 0,
-    swingTimer: 0,
-    swingDuration: 0.22,
-    invulnTimer: 0,
-    isDead: false,
-    dragonSlain: false
-  };
-
-  let worldTime = 0.22;
-  let dayCount = 1;
-  const DAY_LENGTH = 100;
-
-  function addItem(id, count = 1) {
-    const def = ITEMS[id];
-    if (!def) return false;
-    if (def.stack > 1) {
-      for (let i = 0; i < TOTAL_SLOTS; i++) {
-        if (inventory[i] && inventory[i].id === id && inventory[i].count < def.stack) {
-          const add = Math.min(count, def.stack - inventory[i].count);
-          inventory[i].count += add;
-          count -= add;
-          if (count <= 0) { renderInventoryUI(); return true; }
-        }
-      }
-    }
-    for (let i = 0; i < TOTAL_SLOTS; i++) {
-      if (!inventory[i]) {
-        const add = Math.min(count, def.stack);
-        inventory[i] = { id, count: add };
-        count -= add;
-        if (count <= 0) { renderInventoryUI(); return true; }
-      }
-    }
-    renderInventoryUI();
-    return count === 0;
-  }
-
-  function countItem(id) {
-    let total = 0;
-    for (const s of inventory) if (s && s.id === id) total += s.count;
-    return total;
-  }
-
-  function removeItem(id, count) {
-    for (let i = TOTAL_SLOTS - 1; i >= 0; i--) {
-      if (inventory[i] && inventory[i].id === id) {
-        const take = Math.min(count, inventory[i].count);
-        inventory[i].count -= take;
-        count -= take;
-        if (inventory[i].count <= 0) inventory[i] = null;
-        if (count <= 0) break;
-      }
-    }
-    renderInventoryUI();
-  }
-
-  // Starter apple
-  addItem('apple', 2);
-
-  function saveGame(silent = false) {
-    try {
-      const payload = {
-        currentDim,
-        worldTime,
-        dayCount,
-        player,
-        inventory,
-        dims: {}
-      };
-      for (const [k, d] of Object.entries(dims)) {
-        payload.dims[k] = {
-          name: d.name,
-          terrain: d.terrain,
-          objects: d.objects,
-          roof: d.roof,
-          objHp: d.objHp,
-          objMaxHp: d.objMaxHp,
-          objState: d.objState,
-          mobs: d.mobs
-        };
-      }
-      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-      if (!silent) addFloatingText(player.x, player.y - 26, 'World Saved!', '#2ed573');
-    } catch (err) {
-      console.warn('Save failed:', err);
-    }
-  }
-
-  function loadGame() {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return false;
-      const data = JSON.parse(raw);
-      currentDim = data.currentDim || 'overworld';
-      worldTime = data.worldTime ?? 0.22;
-      dayCount = data.dayCount ?? 1;
-      Object.assign(player, data.player);
-      inventory = data.inventory || inventory;
-      for (const [k, d] of Object.entries(data.dims)) {
-        dims[k] = {
-          ...d,
-          objShake: createEmptyGrid(0),
-          mobs: d.mobs || []
-        };
-      }
-      return true;
-    } catch (err) {
-      console.warn('Load failed:', err);
-      return false;
-    }
-  }
-
-  loadGame();
-
-  // --- PROJECTILES, PARTICLES & FLOATING TEXT ---
-  const projectiles = [];
-  const particles = [];
-  const floatingTexts = [];
-  const sculkRipples = [];
-
-  function spawnParticles(x, y, color, count = 7) {
-    for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const spd = 40 + Math.random() * 105;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * spd,
-        vy: Math.sin(a) * spd,
-        life: 0.35 + Math.random() * 0.2,
-        maxLife: 0.55,
-        size: 3 + Math.random() * 3.5,
-        color
-      });
-    }
-  }
-
-  function addFloatingText(x, y, text, color = '#fff') {
-    floatingTexts.push({ x, y, text, color, life: 1.05 });
-  }
-
-  // --- INPUT & UI ---
-  const keys = {};
-  const mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
-  let craftOpen = false;
-  let activeCategory = 'all';
-
-  window.addEventListener('keydown', (e) => {
-    keys[e.code] = true;
-    if (e.code >= 'Digit1' && e.code <= 'Digit9') {
-      player.selectedSlot = parseInt(e.code.replace('Digit', ''), 10) - 1;
-      renderInventoryUI();
-    }
-    if (e.code === 'KeyE' || e.code === 'KeyC') toggleCraftModal();
-    if (e.code === 'Escape' && craftOpen) toggleCraftModal(false);
-  });
-  window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-  window.addEventListener('wheel', (e) => {
-    if (craftOpen) return;
-    if (e.deltaY > 0) player.selectedSlot = (player.selectedSlot + 1) % 9;
-    else if (e.deltaY < 0) player.selectedSlot = (player.selectedSlot + 8) % 9;
-    renderInventoryUI();
-  });
-
-  canvas.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-
-  canvas.addEventListener('mousedown', (e) => {
-    if (craftOpen || player.isDead) return;
-    if (e.button === 0) {
-      mouse.down = true;
-      handlePrimaryAction();
-    } else if (e.button === 2) {
-      handleSecondaryAction();
-    }
-  });
-  window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.down = false; });
-  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-  document.getElementById('toggle-craft-btn').onclick = () => toggleCraftModal();
-  document.getElementById('save-btn').onclick = () => saveGame(false);
-  document.getElementById('reset-btn').onclick = () => {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  };
-  document.getElementById('hard-reset-btn').onclick = () => {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  };
-  document.getElementById('respawn-btn').onclick = () => {
-    player.isDead = false;
-    player.hp = player.maxHp;
-    player.hunger = player.maxHunger;
-    currentDim = player.spawnDim;
-    player.x = player.spawnX;
-    player.y = player.spawnY;
-    document.getElementById('gameover-screen').classList.remove('open');
-  };
-
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeCategory = btn.dataset.cat;
-      renderInventoryUI();
-    };
-  });
-
-  function isNearFurnace() {
-    const dim = dims[currentDim];
-    const ptx = Math.floor(player.x / TILE_SIZE);
-    const pty = Math.floor(player.y / TILE_SIZE);
-    for (let dy = -3; dy <= 3; dy++) {
-      for (let dx = -3; dx <= 3; dx++) {
-        const nx = ptx + dx, ny = pty + dy;
-        if (nx >= 0 && ny >= 0 && nx < WORLD_SIZE && ny < WORLD_SIZE) {
-          if (dim.objects[ny][nx] === OBJ.FURNACE) return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function toggleCraftModal(force) {
-    craftOpen = typeof force === 'boolean' ? force : !craftOpen;
-    document.getElementById('craft-modal').classList.toggle('open', craftOpen);
-    mouse.down = false;
-    if (craftOpen) renderInventoryUI();
-  }
-
-  function renderInventoryUI() {
-    const hotbarEl = document.getElementById('hotbar');
-    hotbarEl.innerHTML = '';
-    for (let i = 0; i < 9; i++) {
-      const slot = inventory[i];
-      const div = document.createElement('div');
-      div.className = 'slot' + (i === player.selectedSlot ? ' active' : '');
-      div.innerHTML = `<span class="slot-key">${i + 1}</span>`;
-      if (slot) {
-        const def = ITEMS[slot.id];
-        div.innerHTML += `<span class="slot-icon">${def.icon}</span>`;
-        if (slot.count > 1) div.innerHTML += `<span class="slot-count">${slot.count}</span>`;
-      }
-      div.onclick = () => { player.selectedSlot = i; renderInventoryUI(); };
-      hotbarEl.appendChild(div);
-    }
-
-    const activeSlot = inventory[player.selectedSlot];
-    document.getElementById('selected-item-name').textContent =
-      activeSlot ? ITEMS[activeSlot.id].name : 'Hand';
-
-    const backpackEl = document.getElementById('backpack-grid');
-    backpackEl.innerHTML = '';
-    for (let i = 9; i < TOTAL_SLOTS; i++) {
-      const slot = inventory[i];
-      const div = document.createElement('div');
-      div.className = 'slot';
-      if (slot) {
-        const def = ITEMS[slot.id];
-        div.innerHTML = `<span class="slot-icon">${def.icon}</span>` +
-          (slot.count > 1 ? `<span class="slot-count">${slot.count}</span>` : '');
-      }
-      div.onclick = () => {
-        const tmp = inventory[player.selectedSlot];
-        inventory[player.selectedSlot] = inventory[i];
-        inventory[i] = tmp;
-        renderInventoryUI();
-      };
-      backpackEl.appendChild(div);
-    }
-
-    const nearFurnace = isNearFurnace();
-    document.getElementById('furnace-status').textContent =
-      nearFurnace ? '🔥 Furnace Active' : '⚠️ Stand by Furnace to Smelt';
-
-    const recipeListEl = document.getElementById('recipe-list');
-    recipeListEl.innerHTML = '';
-    for (const rec of RECIPES) {
-      if (activeCategory !== 'all' && rec.cat !== activeCategory) continue;
-      const outDef = ITEMS[rec.out];
-      let canCraft = !rec.needFurnace || nearFurnace;
-      const costParts = [];
-      for (const [matId, amt] of Object.entries(rec.cost)) {
-        const have = countItem(matId);
-        if (have < amt) canCraft = false;
-        costParts.push(`${ITEMS[matId].icon} ${have}/${amt}`);
-      }
-      if (rec.needFurnace && !nearFurnace) costParts.push('🏭 Need Furnace');
-
-      const card = document.createElement('div');
-      card.className = 'recipe-card ' + (canCraft ? 'can-craft' : 'locked');
-      card.innerHTML = `
-        <div class="recipe-left">
-          <span class="recipe-icon">${outDef.icon}</span>
-          <div>
-            <div class="recipe-name">${outDef.name} ${rec.count > 1 ? `x${rec.count}` : ''}</div>
-            <div class="recipe-desc">${rec.desc}</div>
+          <div class="color-grid">
+            <label class="color-item"><span>Skin Tone</span><input type="color" id="col-skin" value="#d9a077"></label>
+            <label class="color-item"><span>Hair Color</span><input type="color" id="col-hair" value="#4a2e16"></label>
+            <label class="color-item"><span>Eye Color</span><input type="color" id="col-eyes" value="#3b2f8f"></label>
+            <label class="color-item"><span>Shirt / Tunic</span><input type="color" id="col-shirt" value="#00a8a8"></label>
+            <label class="color-item"><span>Pants</span><input type="color" id="col-pants" value="#3b4990"></label>
           </div>
         </div>
-        <div class="recipe-cost">${costParts.join('<br>')}</div>
-      `;
-      if (canCraft) {
-        card.onclick = () => {
-          for (const [matId, amt] of Object.entries(rec.cost)) removeItem(matId, amt);
-          addItem(rec.out, rec.count);
-          addFloatingText(player.x, player.y - 24, `+${rec.count} ${outDef.name}`, '#2ed573');
-        };
-      }
-      recipeListEl.appendChild(card);
-    }
-  }
-  renderInventoryUI();
-
-  // --- COLLISION & SHELTER DETECTION ---
-  function isTileSolid(dim, tx, ty) {
-    if (tx < 0 || ty < 0 || tx >= WORLD_SIZE || ty >= WORLD_SIZE) return true;
-    const t = dim.terrain[ty][tx];
-    if (t === TERRAIN.WATER || t === TERRAIN.LAVA || t === TERRAIN.VOID) return true;
-    const obj = dim.objects[ty][tx];
-    if (obj === OBJ.DOOR_WOOD) return dim.objState[ty][tx] === 0; // 0 = closed, 1 = open
-    return obj === OBJ.TREE || obj === OBJ.PINE_TREE || obj === OBJ.CACTUS ||
-           obj === OBJ.ROCK || obj === OBJ.COAL_ORE || obj === OBJ.IRON_ORE ||
-           obj === OBJ.GOLD_ORE || obj === OBJ.DIAMOND_ORE || obj === OBJ.OBSIDIAN ||
-           obj === OBJ.QUARTZ_ORE || obj === OBJ.ANCIENT_DEBRIS ||
-           obj === OBJ.WALL_WOOD || obj === OBJ.WALL_STONE || obj === OBJ.FURNACE;
-  }
-
-  function resolveCircleCollision(dim, entity) {
-    const minTx = Math.floor((entity.x - entity.radius) / TILE_SIZE) - 1;
-    const maxTx = Math.floor((entity.x + entity.radius) / TILE_SIZE) + 1;
-    const minTy = Math.floor((entity.y - entity.radius) / TILE_SIZE) - 1;
-    const maxTy = Math.floor((entity.y + entity.radius) / TILE_SIZE) + 1;
-
-    for (let ty = minTy; ty <= maxTy; ty++) {
-      for (let tx = minTx; tx <= maxTx; tx++) {
-        if (!isTileSolid(dim, tx, ty)) continue;
-        const left = tx * TILE_SIZE, right = left + TILE_SIZE;
-        const top = ty * TILE_SIZE, bottom = top + TILE_SIZE;
-        const cx = Math.max(left, Math.min(entity.x, right));
-        const cy = Math.max(top, Math.min(entity.y, bottom));
-        const dx = entity.x - cx, dy = entity.y - cy;
-        const dSq = dx * dx + dy * dy;
-        if (dSq < entity.radius * entity.radius) {
-          const dist = Math.sqrt(dSq) || 0.001;
-          const overlap = entity.radius - dist;
-          entity.x += (dx / dist) * overlap;
-          entity.y += (dy / dist) * overlap;
-        }
-      }
-    }
-  }
-
-  function isPlayerSheltered() {
-    const dim = dims[currentDim];
-    const ptx = Math.floor(player.x / TILE_SIZE);
-    const pty = Math.floor(player.y / TILE_SIZE);
-    if (dim.roof[pty] && dim.roof[pty][ptx]) return true;
-    // Also count enclosed 4-directional wall/door box
-    let wallDirs = 0;
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-    for (const [dx, dy] of dirs) {
-      for (let step = 1; step <= 4; step++) {
-        const nx = ptx + dx * step, ny = pty + dy * step;
-        if (nx < 0 || ny < 0 || nx >= WORLD_SIZE || ny >= WORLD_SIZE) break;
-        const o = dim.objects[ny][nx];
-        if (o === OBJ.WALL_WOOD || o === OBJ.WALL_STONE || o === OBJ.DOOR_WOOD) {
-          wallDirs++;
-          break;
-        }
-      }
-    }
-    return wallDirs >= 4;
-  }
-
-  // --- PLAYER PRIMARY & SECONDARY ACTIONS ---
-  const REACH = 115;
-
-  function getTargetTile() {
-    const tx = Math.floor(mouse.worldX / TILE_SIZE);
-    const ty = Math.floor(mouse.worldY / TILE_SIZE);
-    if (tx < 0 || ty < 0 || tx >= WORLD_SIZE || ty >= WORLD_SIZE) return null;
-    const cx = (tx + 0.5) * TILE_SIZE;
-    const cy = (ty + 0.5) * TILE_SIZE;
-    if (Math.hypot(cx - player.x, cy - player.y) > REACH) return null;
-    return { tx, ty, cx, cy };
-  }
-
-  function handlePrimaryAction() {
-    if (player.swingTimer > 0) return;
-    const dim = dims[currentDim];
-    const slot = inventory[player.selectedSlot];
-    const itemDef = slot ? ITEMS[slot.id] : null;
-
-    // 1. Equip Armor
-    if (itemDef && itemDef.type === 'armor') {
-      const oldArmor = player.armor;
-      player.armor = { id: slot.id, name: itemDef.name, icon: itemDef.icon, defense: itemDef.defense };
-      inventory[player.selectedSlot] = oldArmor ? { id: oldArmor.id, count: 1 } : null;
-      renderInventoryUI();
-      addFloatingText(player.x, player.y - 22, `Equipped ${itemDef.name}!`, '#74b9ff');
-      return;
-    }
-
-    // 2. Eat Food
-    if (itemDef && itemDef.type === 'food') {
-      if (player.hunger < player.maxHunger || player.hp < player.maxHp) {
-        player.hunger = Math.min(player.maxHunger, player.hunger + itemDef.hunger);
-        player.hp = Math.min(player.maxHp, player.hp + itemDef.heal);
-        slot.count--;
-        if (slot.count <= 0) inventory[player.selectedSlot] = null;
-        renderInventoryUI();
-        spawnParticles(player.x, player.y, '#ff7675', 6);
-        addFloatingText(player.x, player.y - 20, `+${itemDef.hunger} Hunger`, '#fdcb6e');
-      }
-      return;
-    }
-
-    // 3. Shoot Bow
-    if (itemDef && itemDef.type === 'bow') {
-      player.swingTimer = 0.32;
-      projectiles.push({
-        dim: currentDim,
-        friendly: true,
-        x: player.x + Math.cos(player.angle) * 18,
-        y: player.y + Math.sin(player.angle) * 18,
-        vx: Math.cos(player.angle) * 460,
-        vy: Math.sin(player.angle) * 460,
-        dmg: itemDef.dmg,
-        life: 1.4,
-        color: '#ffeaa7'
-      });
-      return;
-    }
-
-    // 4. Place Block / Floor / Roof / Portal
-    if (itemDef && itemDef.type === 'place') {
-      const target = getTargetTile();
-      if (!target) return;
-      const { tx, ty, cx, cy } = target;
-      const t = dim.terrain[ty][tx];
-      const blockedLiquid = t === TERRAIN.WATER || t === TERRAIN.LAVA || t === TERRAIN.VOID;
-
-      if (itemDef.placeRoof) {
-        if (!blockedLiquid && !dim.roof[ty][tx]) {
-          dim.roof[ty][tx] = true;
-          slot.count--;
-          if (slot.count <= 0) inventory[player.selectedSlot] = null;
-          renderInventoryUI();
-          spawnParticles(cx, cy, '#d4a373', 6);
-        }
-        return;
-      }
-
-      if (itemDef.placeTerrain !== undefined) {
-        if (!blockedLiquid && dim.objects[ty][tx] === OBJ.NONE && t !== itemDef.placeTerrain) {
-          dim.terrain[ty][tx] = itemDef.placeTerrain;
-          slot.count--;
-          if (slot.count <= 0) inventory[player.selectedSlot] = null;
-          renderInventoryUI();
-          spawnParticles(cx, cy, '#d4a373', 6);
-        }
-        return;
-      }
-
-      if (itemDef.placeObj !== undefined) {
-        const playerOverlaps = Math.hypot(cx - player.x, cy - player.y) < player.radius + TILE_SIZE * 0.42;
-        if (!blockedLiquid && dim.objects[ty][tx] === OBJ.NONE && !playerOverlaps) {
-          setDimObject(dim, tx, ty, itemDef.placeObj, 0);
-          slot.count--;
-          if (slot.count <= 0) inventory[player.selectedSlot] = null;
-          renderInventoryUI();
-          spawnParticles(cx, cy, '#dfe6e9', 7);
-        }
-        return;
-      }
-    }
-
-    // 5. Melee Swing (Attack Mobs or Mine Blocks)
-    player.swingTimer = player.swingDuration;
-    const weaponDmg = itemDef && itemDef.dmg ? itemDef.dmg : 9;
-
-    for (let i = dim.mobs.length - 1; i >= 0; i--) {
-      const m = dim.mobs[i];
-      const dx = m.x - player.x, dy = m.y - player.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist <= 76 + m.radius) {
-        const diff = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - player.angle), Math.cos(Math.atan2(dy, dx) - player.angle)));
-        if (diff < 1.2) {
-          damageMob(dim, i, weaponDmg, dx / (dist || 1), dy / (dist || 1));
-          return;
-        }
-      }
-    }
-
-    const target = getTargetTile();
-    if (!target) return;
-    const { tx, ty, cx, cy } = target;
-    const obj = dim.objects[ty][tx];
-    if (obj === OBJ.NONE || obj === OBJ.CAVE_DOWN || obj === OBJ.CAVE_UP ||
-        obj === OBJ.NETHER_PORTAL || obj === OBJ.END_PORTAL) return;
-
-    const toolType = itemDef ? itemDef.toolType : null;
-    const tier = itemDef ? (itemDef.tier || 0) : 0;
-    const power = itemDef ? itemDef.power : 1;
-
-    // Tier gating for hard ores
-    if ((obj === OBJ.IRON_ORE && tier < 2) ||
-        ((obj === OBJ.GOLD_ORE || obj === OBJ.DIAMOND_ORE) && tier < 3) ||
-        ((obj === OBJ.OBSIDIAN || obj === OBJ.ANCIENT_DEBRIS) && tier < 4)) {
-      addFloatingText(cx, cy - 12, 'Need Stronger Pickaxe!', '#ff7675');
-      dim.objShake[ty][tx] = 0.14;
-      return;
-    }
-
-    let dmg = 10;
-    if (obj === OBJ.TREE || obj === OBJ.PINE_TREE || obj === OBJ.STUMP) {
-      dmg = toolType === 'axe' ? 14 * power : 11;
-      spawnParticles(cx, cy, '#8d6e63', 5);
-    } else if (obj === OBJ.END_CRYSTAL) {
-      dmg = 40;
-      spawnParticles(cx, cy, '#ff79c6', 12);
-    } else {
-      dmg = toolType === 'pick' ? 13 * power : 8;
-      spawnParticles(cx, cy, '#b2bec3', 5);
-    }
-
-    dim.objHp[ty][tx] -= dmg;
-    dim.objShake[ty][tx] = 0.15;
-    if (dim.objHp[ty][tx] <= 0) {
-      harvestDimObject(dim, tx, ty, cx, cy, obj);
-    }
-  }
-
-  function damageMob(dim, idx, dmg, nx, ny) {
-    const m = dim.mobs[idx];
-    // Ender Dragon heals if End Crystals remain!
-    if (m.kind === 'ender_dragon') {
-      let crystals = 0;
-      for (let y = 0; y < WORLD_SIZE; y++)
-        for (let x = 0; x < WORLD_SIZE; x++)
-          if (dim.objects[y][x] === OBJ.END_CRYSTAL) crystals++;
-      if (crystals > 0) {
-        addFloatingText(m.x, m.y - 30, 'Destroy End Crystals First!', '#ff79c6');
-        return;
-      }
-    }
-
-    m.hp -= dmg;
-    m.vx += nx * (m.boss ? 60 : 210);
-    m.vy += ny * (m.boss ? 60 : 210);
-    spawnParticles(m.x, m.y, '#ff7675', 8);
-    addFloatingText(m.x, m.y - 16, `-${dmg}`, '#ff7675');
-
-    if (m.hp <= 0) {
-      dim.mobs.splice(idx, 1);
-      dropMobLoot(m);
-    }
-  }
-
-  function dropMobLoot(m) {
-    const drops = {
-      cow:          [['raw_meat', 2], ['leather', 2]],
-      pig:          [['raw_meat', 2]],
-      sheep:        [['wool', 2], ['raw_meat', 1]],
-      zombie:       [['iron_ingot', 1]],
-      skeleton:     [['coal', 2]],
-      creeper:      [['coal', 3]],
-      enderman:     [['ender_pearl', 1]],
-      blaze:        [['blaze_rod', 1]],
-      piglin:       [['gold_ingot', 2]],
-      warden:       [['diamond', 4], ['golden_apple', 1]],
-      ender_dragon: [['dragon_egg', 1], ['diamond', 8]]
-    };
-    const list = drops[m.kind] || [];
-    for (const [id, amt] of list) {
-      addItem(id, amt);
-      addFloatingText(m.x, m.y - 24, `+${amt} ${ITEMS[id].name}`, '#ffeaa7');
-    }
-    if (m.kind === 'ender_dragon') {
-      player.dragonSlain = true;
-      addFloatingText(player.x, player.y - 45, '🏆 ENDER DRAGON DEFEATED!', '#ffd32a');
-    }
-  }
-
-  function harvestDimObject(dim, tx, ty, cx, cy, obj) {
-    dim.objects[ty][tx] = OBJ.NONE;
-    const lootTable = {
-      [OBJ.TREE]:           () => { addItem('wood', 3); if (Math.random() < 0.45) addItem('apple', 1); setDimObject(dim, tx, ty, OBJ.STUMP); },
-      [OBJ.PINE_TREE]:      () => { addItem('wood', 3); setDimObject(dim, tx, ty, OBJ.STUMP); },
-      [OBJ.STUMP]:          () => { addItem('wood', 1); },
-      [OBJ.CACTUS]:         () => { addItem('wood', 2); },
-      [OBJ.ROCK]:           () => { addItem('cobble', 3); if (dim.terrain[ty][tx] === TERRAIN.SAND) addItem('sand', 1); },
-      [OBJ.COAL_ORE]:       () => { addItem('coal', 3); addItem('cobble', 1); },
-      [OBJ.IRON_ORE]:       () => { addItem('iron_ore', 2); },
-      [OBJ.GOLD_ORE]:       () => { addItem('gold_ore', 2); },
-      [OBJ.DIAMOND_ORE]:    () => { addItem('diamond', 2); },
-      [OBJ.OBSIDIAN]:       () => { addItem('obsidian', 1); },
-      [OBJ.QUARTZ_ORE]:     () => { addItem('quartz', 3); },
-      [OBJ.ANCIENT_DEBRIS]: () => { addItem('ancient_debris', 1); },
-      [OBJ.BERRY_BUSH]:     () => { addItem('berries', 2); },
-      [OBJ.ANCIENT_CHEST]:  () => { addItem('diamond', 3); addItem('golden_apple', 1); addItem('iron_ingot', 4); },
-      [OBJ.WALL_WOOD]:      () => { addItem('wood_wall', 1); },
-      [OBJ.WALL_STONE]:     () => { addItem('stone_wall', 1); },
-      [OBJ.DOOR_WOOD]:      () => { addItem('wood_door', 1); },
-      [OBJ.FURNACE]:        () => { addItem('furnace', 1); },
-      [OBJ.CAMPFIRE]:       () => { addItem('campfire', 1); },
-      [OBJ.TORCH]:          () => { addItem('torch', 1); },
-      [OBJ.BED]:            () => { addItem('bed', 1); }
-    };
-    if (lootTable[obj]) {
-      lootTable[obj]();
-      addFloatingText(cx, cy - 12, 'Gathered!', '#ffeaa7');
-    }
-  }
-
-  function handleSecondaryAction() {
-    const dim = dims[currentDim];
-    const target = getTargetTile();
-    if (!target) return;
-    const { tx, ty, cx, cy } = target;
-    const obj = dim.objects[ty][tx];
-
-    // Toggle Door
-    if (obj === OBJ.DOOR_WOOD) {
-      dim.objState[ty][tx] = dim.objState[ty][tx] === 0 ? 1 : 0;
-      spawnParticles(cx, cy, '#d4a373', 4);
-      return;
-    }
-
-    // Sleep in Bed
-    if (obj === OBJ.BED) {
-      player.spawnDim = currentDim;
-      player.spawnX = cx;
-      player.spawnY = cy;
-      if (worldTime > 0.55 || worldTime < 0.12) {
-        worldTime = 0.22;
-        dayCount++;
-        player.hp = Math.min(player.maxHp, player.hp + 30);
-        addFloatingText(cx, cy - 22, 'Slept till Morning! Spawn Set', '#74b9ff');
-      } else {
-        addFloatingText(cx, cy - 22, 'Respawn Point Set!', '#74b9ff');
-      }
-      return;
-    }
-
-    // Enter Cave Down
-    if (obj === OBJ.CAVE_DOWN && currentDim === 'overworld') {
-      currentDim = 'caves';
-      clearSafeArea(dims.caves, tx, ty, 2, TERRAIN.STONE_FLOOR);
-      setDimObject(dims.caves, tx, ty, OBJ.CAVE_UP);
-      player.x = (tx + 0.5) * TILE_SIZE;
-      player.y = (ty + 0.5) * TILE_SIZE;
-      addFloatingText(player.x, player.y - 24, 'Entered Caves & Deep Dark', '#a29bfe');
-      return;
-    }
-
-    // Exit Cave Up
-    if (obj === OBJ.CAVE_UP && currentDim === 'caves') {
-      currentDim = 'overworld';
-      clearSafeArea(dims.overworld, tx, ty, 1, TERRAIN.GRASS);
-      setDimObject(dims.overworld, tx, ty, OBJ.CAVE_DOWN);
-      player.x = (tx + 0.5) * TILE_SIZE;
-      player.y = (ty + 0.5) * TILE_SIZE;
-      addFloatingText(player.x, player.y - 24, 'Returned to Overworld', '#2ed573');
-      return;
-    }
-
-    // Nether Portal Travel
-    if (obj === OBJ.NETHER_PORTAL) {
-      if (currentDim === 'overworld') {
-        currentDim = 'nether';
-        clearSafeArea(dims.nether, tx, ty, 2, TERRAIN.NETHERRACK);
-        setDimObject(dims.nether, tx, ty, OBJ.NETHER_PORTAL);
-        player.x = (tx + 0.5) * TILE_SIZE;
-        player.y = (ty + 0.5) * TILE_SIZE;
-        addFloatingText(player.x, player.y - 24, 'Entered The Nether!', '#ff6b6b');
-      } else if (currentDim === 'nether') {
-        currentDim = 'overworld';
-        clearSafeArea(dims.overworld, tx, ty, 1, TERRAIN.GRASS);
-        setDimObject(dims.overworld, tx, ty, OBJ.NETHER_PORTAL);
-        player.x = (tx + 0.5) * TILE_SIZE;
-        player.y = (ty + 0.5) * TILE_SIZE;
-        addFloatingText(player.x, player.y - 24, 'Returned to Overworld', '#2ed573');
-      }
-      return;
-    }
-
-    // End Portal Travel
-    if (obj === OBJ.END_PORTAL) {
-      const mid = Math.floor(WORLD_SIZE / 2);
-      if (currentDim === 'overworld') {
-        currentDim = 'end';
-        player.x = (mid + 0.5) * TILE_SIZE;
-        player.y = (mid + 13.5) * TILE_SIZE;
-        addFloatingText(player.x, player.y - 24, 'Entered The End!', '#ff79c6');
-      } else if (currentDim === 'end') {
-        currentDim = 'overworld';
-        player.x = player.spawnX;
-        player.y = player.spawnY;
-        addFloatingText(player.x, player.y - 24, 'Returned to Overworld', '#2ed573');
-      }
-      return;
-    }
-
-    // Reclaim Roof or Player-Built Blocks
-    if (dim.roof[ty][tx]) {
-      dim.roof[ty][tx] = false;
-      addItem('wood_roof', 1);
-      spawnParticles(cx, cy, '#d4a373', 5);
-      return;
-    }
-    const reclaimable = [OBJ.WALL_WOOD, OBJ.WALL_STONE, OBJ.FURNACE, OBJ.CAMPFIRE, OBJ.TORCH, OBJ.BED];
-    if (reclaimable.includes(obj)) {
-      harvestDimObject(dim, tx, ty, cx, cy, obj);
-      spawnParticles(cx, cy, '#dfe6e9', 5);
-    }
-  }
-
-  // --- MOB SPAWNING & AI ---
-  let mobSpawnTimer = 0;
-
-  function spawnMobsForDim(dim, isNight, sheltered) {
-    if (dim.mobs.length >= 14) return;
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 340 + Math.random() * 220;
-    const sx = player.x + Math.cos(angle) * dist;
-    const sy = player.y + Math.sin(angle) * dist;
-    const tx = Math.floor(sx / TILE_SIZE);
-    const ty = Math.floor(sy / TILE_SIZE);
-    if (tx < 2 || ty < 2 || tx >= WORLD_SIZE - 2 || ty >= WORLD_SIZE - 2) return;
-    if (isTileSolid(dim, tx, ty) || dim.roof[ty][tx]) return;
-
-    if (currentDim === 'overworld') {
-      if (!isNight) {
-        const passive = ['cow', 'pig', 'sheep'][Math.floor(Math.random() * 3)];
-        dim.mobs.push({ kind: passive, x: sx, y: sy, vx: 0, vy: 0, radius: 13, hp: 25, maxHp: 25, speed: 45, timer: Math.random() * 4, hostile: false });
-      } else if (!sheltered) {
-        const hostiles = ['zombie', 'skeleton', 'creeper', 'enderman'];
-        const pick = hostiles[Math.floor(Math.random() * hostiles.length)];
-        const stats = {
-          zombie:   { hp: 40, speed: 82, radius: 14 },
-          skeleton: { hp: 32, speed: 75, radius: 13 },
-          creeper:  { hp: 35, speed: 88, radius: 13 },
-          enderman: { hp: 65, speed: 105, radius: 15 }
-        }[pick];
-        dim.mobs.push({ kind: pick, x: sx, y: sy, vx: 0, vy: 0, ...stats, maxHp: stats.hp, timer: 0, hostile: true });
-      }
-    } else if (currentDim === 'caves') {
-      if (ty > 37) {
-        // Deep Dark: Spawn Warden if none exists
-        const hasWarden = dim.mobs.some((m) => m.kind === 'warden');
-        if (!hasWarden) {
-          dim.mobs.push({ kind: 'warden', x: sx, y: sy, vx: 0, vy: 0, radius: 22, hp: 320, maxHp: 320, speed: 95, timer: 0, hostile: true, boss: true });
-        }
-      } else {
-        const pick = Math.random() < 0.5 ? 'zombie' : 'skeleton';
-        dim.mobs.push({ kind: pick, x: sx, y: sy, vx: 0, vy: 0, radius: 14, hp: 42, maxHp: 42, speed: 84, timer: 0, hostile: true });
-      }
-    } else if (currentDim === 'nether') {
-      const pick = Math.random() < 0.55 ? 'blaze' : 'piglin';
-      dim.mobs.push({
-        kind: pick, x: sx, y: sy, vx: 0, vy: 0,
-        radius: 15, hp: pick === 'blaze' ? 55 : 50, maxHp: 55,
-        speed: 88, timer: 0, hostile: true
-      });
-    } else if (currentDim === 'end') {
-      dim.mobs.push({ kind: 'enderman', x: sx, y: sy, vx: 0, vy: 0, radius: 15, hp: 65, maxHp: 65, speed: 100, timer: 0, hostile: true });
-    }
-  }
-
-  function applyPlayerDamage(rawDmg, label) {
-    if (player.invulnTimer > 0) return;
-    const reduction = player.armor ? player.armor.defense : 0;
-    const finalDmg = Math.max(1, Math.round(rawDmg * (1 - reduction)));
-    player.hp -= finalDmg;
-    player.invulnTimer = 0.8;
-    spawnParticles(player.x, player.y, '#ff4757', 8);
-    addFloatingText(player.x, player.y - 20, `-${finalDmg} ${label || 'HP'}`, '#ff4757');
-  }
-
-  // --- MAIN UPDATE LOOP ---
-  const camera = { x: player.x, y: player.y };
-  let autoSaveTimer = 0;
-  let comfortTick = 0;
-
-  function update(dt) {
-    if (player.isDead) return;
-    const dim = dims[currentDim];
-
-    // Auto-save every 30 seconds
-    autoSaveTimer += dt;
-    if (autoSaveTimer >= 30) {
-      autoSaveTimer = 0;
-      saveGame(true);
-    }
-
-    // Time progression
-    worldTime += dt / DAY_LENGTH;
-    if (worldTime >= 1) { worldTime -= 1; dayCount++; }
-    const sun = Math.sin(worldTime * Math.PI * 2);
-    const isNight = currentDim === 'overworld' && sun < -0.15;
-
-    // Movement
-    let mx = 0, my = 0;
-    if (!craftOpen) {
-      if (keys['KeyW'] || keys['ArrowUp']) my -= 1;
-      if (keys['KeyS'] || keys['ArrowDown']) my += 1;
-      if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
-      if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
-    }
-    const isMoving = mx !== 0 || my !== 0;
-    if (isMoving) {
-      const len = Math.hypot(mx, my);
-      mx /= len; my /= len;
-      player.x += mx * player.speed * dt;
-      player.y += my * player.speed * dt;
-      resolveCircleCollision(dim, player);
-
-      // Sculk sensor vibration trigger in Deep Dark
-      const ptx = Math.floor(player.x / TILE_SIZE);
-      const pty = Math.floor(player.y / TILE_SIZE);
-      if (currentDim === 'caves' && dim.objects[pty] && dim.objects[pty][ptx] === OBJ.SCULK_SENSOR) {
-        if (Math.random() < dt * 3) {
-          sculkRipples.push({ x: player.x, y: player.y, r: 8, alpha: 1 });
-          spawnMobsForDim(dim, true, false);
-        }
-      }
-    }
-
-    camera.x += (player.x - camera.x) * Math.min(1, dt * 10);
-    camera.y += (player.y - camera.y) * Math.min(1, dt * 10);
-
-    mouse.worldX = mouse.x - canvas.width / 2 + camera.x;
-    mouse.worldY = mouse.y - canvas.height / 2 + camera.y;
-    player.angle = Math.atan2(mouse.worldY - player.y, mouse.worldX - player.x);
-
-    if (mouse.down && !craftOpen && player.swingTimer <= 0) handlePrimaryAction();
-    if (player.swingTimer > 0) player.swingTimer = Math.max(0, player.swingTimer - dt);
-    if (player.invulnTimer > 0) player.invulnTimer = Math.max(0, player.invulnTimer - dt);
-
-    // Hunger & Sheltered Regeneration
-    player.hunger = Math.max(0, player.hunger - dt * 0.38);
-    if (player.hunger <= 0) player.hp -= dt * 2.5;
-
-    const sheltered = isPlayerSheltered();
-    comfortTick += dt;
-    if (comfortTick >= 1.0) {
-      comfortTick = 0;
-      if (sheltered && player.hunger > 15 && player.hp < player.maxHp) {
-        player.hp = Math.min(player.maxHp, player.hp + 3);
-      }
-    }
-
-    // Update HUD
-    document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
-    document.getElementById('hp-text').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
-    document.getElementById('hunger-fill').style.width = `${Math.max(0, (player.hunger / player.maxHunger) * 100)}%`;
-    document.getElementById('hunger-text').textContent = `${Math.ceil(player.hunger)} / ${player.maxHunger}`;
-    document.getElementById('armor-badge').textContent = player.armor ? `${player.armor.icon} ${Math.round(player.armor.defense * 100)}%` : '🛡️ 0%';
-    document.getElementById('status-badge').textContent = sheltered ? '🏠 Sheltered' : '🌲 Exposed';
-    document.getElementById('dim-badge').textContent =
-      currentDim === 'overworld' ? '🌍 Overworld' :
-      currentDim === 'caves' ? '🕳️ Caves / Deep Dark' :
-      currentDim === 'nether' ? '🔥 The Nether' : '🌌 The End';
-
-    document.getElementById('time-icon').textContent = isNight ? '🌙' : '☀️';
-    document.getElementById('day-text').textContent = `Day ${dayCount} — ${isNight ? 'Night' : 'Day'}`;
-    updateQuestText();
-
-    if (player.hp <= 0) {
-      player.isDead = true;
-      document.getElementById('survival-summary').textContent = `Survived ${dayCount} Day${dayCount > 1 ? 's' : ''}`;
-      document.getElementById('gameover-screen').classList.add('open');
-      return;
-    }
-
-    // Shake decay
-    for (let y = 0; y < WORLD_SIZE; y++)
-      for (let x = 0; x < WORLD_SIZE; x++)
-        if (dim.objShake[y][x] > 0) dim.objShake[y][x] = Math.max(0, dim.objShake[y][x] - dt);
-
-    // Mob Spawning
-    mobSpawnTimer -= dt;
-    if (mobSpawnTimer <= 0) {
-      mobSpawnTimer = 3.2;
-      spawnMobsForDim(dim, isNight, sheltered);
-    }
-
-    // Update Mobs & Boss Bar
-    let activeBoss = null;
-    for (let i = dim.mobs.length - 1; i >= 0; i--) {
-      const m = dim.mobs[i];
-      if (m.boss) activeBoss = m;
-      m.timer += dt;
-
-      const dx = player.x - m.x, dy = player.y - m.y;
-      const dist = Math.hypot(dx, dy) || 1;
-
-      if (!m.hostile && !m.boss) {
-        // Passive wandering
-        if (Math.floor(m.timer) % 3 === 0) {
-          const wa = Math.sin(m.timer * 1.7) * Math.PI;
-          m.x += Math.cos(wa) * m.speed * dt;
-          m.y += Math.sin(wa) * m.speed * dt;
-        }
-      } else if (m.kind === 'ender_dragon') {
-        // Circling + swooping boss AI
-        const orbitAngle = m.timer * 0.9;
-        const targetX = (WORLD_SIZE / 2) * TILE_SIZE + Math.cos(orbitAngle) * 240;
-        const targetY = (WORLD_SIZE / 2) * TILE_SIZE + Math.sin(orbitAngle) * 240;
-        const bdx = targetX - m.x, bdy = targetY - m.y;
-        const bdist = Math.hypot(bdx, bdy) || 1;
-        m.x += (bdx / bdist) * m.speed * dt;
-        m.y += (bdy / bdist) * m.speed * dt;
-
-        if (m.timer % 2.4 < dt) {
-          projectiles.push({
-            dim: currentDim, friendly: false,
-            x: m.x, y: m.y,
-            vx: (dx / dist) * 280, vy: (dy / dist) * 280,
-            dmg: 22, life: 2.2, color: '#ff79c6'
-          });
-        }
-      } else {
-        // Hostile pursuit & special attacks
-        if (m.kind === 'creeper' && dist < 68) {
-          m.fuse = (m.fuse || 0) + dt;
-          if (m.fuse >= 1.1) {
-            spawnParticles(m.x, m.y, '#2ed573', 24);
-            if (dist < 110) applyPlayerDamage(36, 'Creeper Blast');
-            dim.mobs.splice(i, 1);
-            continue;
-          }
-        } else {
-          m.fuse = 0;
-          const stopDist = (m.kind === 'skeleton' || m.kind === 'blaze') ? 190 : 0;
-          if (dist > stopDist) {
-            m.x += ((dx / dist) * m.speed + m.vx) * dt;
-            m.y += ((dy / dist) * m.speed + m.vy) * dt;
-          }
-        }
-
-        // Ranged mobs (Skeleton arrows, Blaze fireballs, Warden sonic boom)
-        if ((m.kind === 'skeleton' || m.kind === 'blaze') && dist < 340 && m.timer % 2.2 < dt) {
-          projectiles.push({
-            dim: currentDim, friendly: false,
-            x: m.x, y: m.y,
-            vx: (dx / dist) * 260, vy: (dy / dist) * 260,
-            dmg: m.kind === 'blaze' ? 18 : 13,
-            life: 1.8,
-            color: m.kind === 'blaze' ? '#ffa502' : '#dfe6e9'
-          });
-        } else if (m.kind === 'warden' && dist < 280 && m.timer % 2.8 < dt) {
-          projectiles.push({
-            dim: currentDim, friendly: false,
-            x: m.x, y: m.y,
-            vx: (dx / dist) * 340, vy: (dy / dist) * 340,
-            dmg: 32, life: 1.3, color: '#00cec9'
-          });
-        }
-
-        if (dist < player.radius + m.radius) {
-          applyPlayerDamage(m.kind === 'warden' ? 35 : 14);
-        }
-      }
-
-      m.vx *= Math.pow(0.05, dt);
-      m.vy *= Math.pow(0.05, dt);
-      if (m.kind !== 'ender_dragon') resolveCircleCollision(dim, m);
-    }
-
-    const bossWrap = document.getElementById('boss-bar-wrap');
-    if (activeBoss) {
-      bossWrap.classList.add('active');
-      document.getElementById('boss-name').textContent =
-        activeBoss.kind === 'warden' ? 'THE WARDEN' : 'ENDER DRAGON';
-      document.getElementById('boss-bar-fill').style.width =
-        `${Math.max(0, (activeBoss.hp / activeBoss.maxHp) * 100)}%`;
-    } else {
-      bossWrap.classList.remove('active');
-    }
-
-    // Update Projectiles
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-      const p = projectiles[i];
-      if (p.dim !== currentDim) { projectiles.splice(i, 1); continue; }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= dt;
-      if (p.life <= 0) { projectiles.splice(i, 1); continue; }
-
-      const tx = Math.floor(p.x / TILE_SIZE), ty = Math.floor(p.y / TILE_SIZE);
-      if (isTileSolid(dim, tx, ty)) {
-        // Bow arrows can shatter End Crystals!
-        if (p.friendly && dim.objects[ty] && dim.objects[ty][tx] === OBJ.END_CRYSTAL) {
-          dim.objects[ty][tx] = OBJ.NONE;
-          spawnParticles(p.x, p.y, '#ff79c6', 18);
-          addFloatingText(p.x, p.y - 16, 'End Crystal Destroyed!', '#ff79c6');
-        }
-        projectiles.splice(i, 1);
-        continue;
-      }
-
-      if (p.friendly) {
-        for (let j = dim.mobs.length - 1; j >= 0; j--) {
-          const m = dim.mobs[j];
-          if (Math.hypot(p.x - m.x, p.y - m.y) < m.radius + 6) {
-            damageMob(dim, j, p.dmg, p.vx / 400, p.vy / 400);
-            projectiles.splice(i, 1);
-            break;
-          }
-        }
-      } else if (Math.hypot(p.x - player.x, p.y - player.y) < player.radius + 6) {
-        applyPlayerDamage(p.dmg);
-        projectiles.splice(i, 1);
-      }
-    }
-
-    // Update Particles, Ripples & Floating Text
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-    for (let i = sculkRipples.length - 1; i >= 0; i--) {
-      const sr = sculkRipples[i];
-      sr.r += 75 * dt; sr.alpha -= dt * 1.1;
-      if (sr.alpha <= 0) sculkRipples.splice(i, 1);
-    }
-    for (let i = floatingTexts.length - 1; i >= 0; i--) {
-      const ft = floatingTexts[i];
-      ft.y -= 26 * dt; ft.life -= dt;
-      if (ft.life <= 0) floatingTexts.splice(i, 1);
-    }
-  }
-
-  function updateQuestText() {
-    const q = document.getElementById('quest-box');
-    if (player.dragonSlain) {
-      q.innerHTML = '🏆 <b>Victory!</b> You slew the Ender Dragon and conquered Paper Minecraft!';
-    } else if (countItem('eye_of_ender') > 0 || countItem('end_portal') > 0 || currentDim === 'end') {
-      q.innerHTML = '🌌 <b>Goal:</b> Place & Right-Click the End Portal, break the 4 Crystals, and slay the Ender Dragon!';
-    } else if (countItem('obsidian') > 0 || countItem('nether_portal') > 0 || currentDim === 'nether') {
-      q.innerHTML = '🔥 <b>Goal:</b> Enter The Nether, defeat Blazes for Blaze Rods, and craft Eyes of Ender!';
-    } else if (countItem('diamond') > 0 || countItem('diamond_pick') > 0) {
-      q.innerHTML = '💎 <b>Goal:</b> Mine Obsidian with a Diamond Pickaxe and craft a Nether Portal!';
-    } else {
-      q.innerHTML = '🎯 <b>Goal:</b> Build a Roofed Shelter & Furnace, then Right-Click a Cave Ladder for Iron & Diamonds!';
-    }
-  }
-
-  // --- RENDERING ---
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const dim = dims[currentDim];
-    const camLeft = camera.x - canvas.width / 2;
-    const camTop = camera.y - canvas.height / 2;
-
-    ctx.save();
-    ctx.translate(-camLeft, -camTop);
-
-    const startTx = Math.max(0, Math.floor(camLeft / TILE_SIZE) - 1);
-    const endTx = Math.min(WORLD_SIZE - 1, Math.ceil((camLeft + canvas.width) / TILE_SIZE) + 1);
-    const startTy = Math.max(0, Math.floor(camTop / TILE_SIZE) - 1);
-    const endTy = Math.min(WORLD_SIZE - 1, Math.ceil((camTop + canvas.height) / TILE_SIZE) + 1);
-
-    const lightSources = [{ x: player.x, y: player.y, r: 150, warm: false }];
-
-    // 1. Terrain
-    const terrainColors = {
-      [TERRAIN.WATER]: '#2bcbba',
-      [TERRAIN.SAND]: '#f7d794',
-      [TERRAIN.GRASS]: '#78e08f',
-      [TERRAIN.FOREST_GRASS]: '#38ada9',
-      [TERRAIN.SNOW]: '#f5f6fa',
-      [TERRAIN.FLOOR_WOOD]: '#d4a373',
-      [TERRAIN.STONE_FLOOR]: '#636e72',
-      [TERRAIN.DEEPSLATE]: '#2d3436',
-      [TERRAIN.SCULK]: '#0a3d62',
-      [TERRAIN.NETHERRACK]: '#833471',
-      [TERRAIN.LAVA]: '#ff5252',
-      [TERRAIN.END_STONE]: '#f8efba',
-      [TERRAIN.VOID]: '#0b0c10'
-    };
-
-    for (let ty = startTy; ty <= endTy; ty++) {
-      for (let tx = startTx; tx <= endTx; tx++) {
-        const px = tx * TILE_SIZE, py = ty * TILE_SIZE;
-        const t = dim.terrain[ty][tx];
-        ctx.fillStyle = terrainColors[t] || '#78e08f';
-        ctx.fillRect(px, py, TILE_SIZE + 0.6, TILE_SIZE + 0.6);
-
-        if (t === TERRAIN.FLOOR_WOOD) {
-          ctx.strokeStyle = '#bc8a5f';
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-        } else if (t === TERRAIN.LAVA) {
-          lightSources.push({ x: px + TILE_SIZE / 2, y: py + TILE_SIZE / 2, r: 110, warm: true });
-        } else if (t === TERRAIN.SCULK && (tx + ty) % 2 === 0) {
-          ctx.fillStyle = '#00cec9';
-          ctx.fillRect(px + 14, py + 14, 5, 5);
-        }
-      }
-    }
-
-    // 2. Placement Ghost
-    const activeSlot = inventory[player.selectedSlot];
-    const activeDef = activeSlot ? ITEMS[activeSlot.id] : null;
-    if (activeDef && activeDef.type === 'place' && !craftOpen) {
-      const target = getTargetTile();
-      if (target) {
-        ctx.fillStyle = 'rgba(46, 213, 115, 0.32)';
-        ctx.strokeStyle = '#2ed573';
-        ctx.lineWidth = 2;
-        ctx.fillRect(target.tx * TILE_SIZE + 2, target.ty * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-        ctx.strokeRect(target.tx * TILE_SIZE + 2, target.ty * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      }
-    }
-
-    // 3. Objects
-    for (let ty = startTy; ty <= endTy; ty++) {
-      for (let tx = startTx; tx <= endTx; tx++) {
-        const obj = dim.objects[ty][tx];
-        if (obj === OBJ.NONE) continue;
-        const shake = dim.objShake[ty][tx] > 0 ? (Math.random() - 0.5) * 5 : 0;
-        const cx = (tx + 0.5) * TILE_SIZE + shake;
-        const cy = (ty + 0.5) * TILE_SIZE;
-        const px = tx * TILE_SIZE + shake;
-        const py = ty * TILE_SIZE;
-
-        drawObjectTile(ctx, obj, px, py, cx, cy, dim.objState[ty][tx], lightSources);
-
-        if (dim.objHp[ty][tx] > 0 && dim.objHp[ty][tx] < dim.objMaxHp[ty][tx]) {
-          const pct = dim.objHp[ty][tx] / dim.objMaxHp[ty][tx];
-          ctx.fillStyle = 'rgba(0,0,0,0.65)';
-          ctx.fillRect(px + 5, py - 5, TILE_SIZE - 10, 4);
-          ctx.fillStyle = '#2ed573';
-          ctx.fillRect(px + 5, py - 5, (TILE_SIZE - 10) * pct, 4);
-        }
-      }
-    }
-
-    // 4. Mobs
-    for (const m of dim.mobs) drawMob(ctx, m);
-
-    // 5. Player
-    drawPlayer(ctx, activeDef);
-
-    // 6. Roof Layer (Translucent when player is under a roof!)
-    const ptx = Math.floor(player.x / TILE_SIZE);
-    const pty = Math.floor(player.y / TILE_SIZE);
-    const underRoof = dim.roof[pty] && dim.roof[pty][ptx];
-    ctx.globalAlpha = underRoof ? 0.28 : 0.94;
-    for (let ty = startTy; ty <= endTy; ty++) {
-      for (let tx = startTx; tx <= endTx; tx++) {
-        if (!dim.roof[ty][tx]) continue;
-        const px = tx * TILE_SIZE, py = ty * TILE_SIZE;
-        ctx.fillStyle = '#a06cd5';
-        ctx.fillStyle = '#8d5524';
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-        ctx.strokeStyle = '#5c3317';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // 7. Projectiles, Ripples, Particles & Floating Text
-    for (const p of projectiles) {
-      if (p.dim !== currentDim) continue;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    for (const sr of sculkRipples) {
-      ctx.strokeStyle = `rgba(0, 206, 201, ${sr.alpha})`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(sr.x, sr.y, sr.r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
-
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    for (const ft of floatingTexts) {
-      ctx.globalAlpha = Math.max(0, ft.life);
-      ctx.fillStyle = '#000';
-      ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
-      ctx.fillStyle = ft.color;
-      ctx.fillText(ft.text, ft.x, ft.y);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    // 8. Darkness & Dynamic Lighting
-    const sun = Math.sin(worldTime * Math.PI * 2);
-    let darkness = 0;
-    if (currentDim === 'overworld') darkness = Math.max(0, Math.min(0.84, (-sun + 0.12) * 0.78));
-    else if (currentDim === 'caves') darkness = 0.78;
-    else if (currentDim === 'nether') darkness = 0.25;
-    else if (currentDim === 'end') darkness = 0.35;
-
-    if (darkness > 0.01) {
-      lightCtx.globalCompositeOperation = 'source-over';
-      lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
-      lightCtx.fillStyle = `rgba(8, 12, 26, ${darkness})`;
-      lightCtx.fillRect(0, 0, lightCanvas.width, lightCanvas.height);
-
-      lightCtx.globalCompositeOperation = 'destination-out';
-      for (const ls of lightSources) {
-        const sx = ls.x - camLeft, sy = ls.y - camTop;
-        const grad = lightCtx.createRadialGradient(sx, sy, ls.r * 0.15, sx, sy, ls.r);
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        lightCtx.fillStyle = grad;
-        lightCtx.beginPath();
-        lightCtx.arc(sx, sy, ls.r, 0, Math.PI * 2);
-        lightCtx.fill();
-      }
-      ctx.drawImage(lightCanvas, 0, 0);
-    }
-
-    drawMinimap(dim);
-  }
-
-  function drawObjectTile(ctx, obj, px, py, cx, cy, state, lightSources) {
-    if (obj === OBJ.TREE || obj === OBJ.PINE_TREE) {
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
-      ctx.beginPath(); ctx.arc(cx + 3, cy + 6, 19, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = obj === OBJ.PINE_TREE ? '#1e824c' : '#218c74';
-      ctx.beginPath(); ctx.arc(cx, cy, 19, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = obj === OBJ.PINE_TREE ? '#2ecc71' : '#33d9b2';
-      ctx.beginPath(); ctx.arc(cx - 3, cy - 3, 11, 0, Math.PI * 2); ctx.fill();
-    } else if (obj === OBJ.CACTUS) {
-      ctx.fillStyle = '#27ae60';
-      ctx.fillRect(cx - 9, cy - 15, 18, 30);
-      ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2;
-      ctx.strokeRect(cx - 9, cy - 15, 18, 30);
-    } else if (obj === OBJ.STUMP) {
-      ctx.fillStyle = '#8d6e63';
-      ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
-    } else if ([OBJ.ROCK, OBJ.COAL_ORE, OBJ.IRON_ORE, OBJ.GOLD_ORE, OBJ.DIAMOND_ORE, OBJ.OBSIDIAN, OBJ.QUARTZ_ORE, OBJ.ANCIENT_DEBRIS].includes(obj)) {
-      ctx.fillStyle = obj === OBJ.OBSIDIAN ? '#2c2c54' : obj === OBJ.ANCIENT_DEBRIS ? '#5d4037' : '#95a5a6';
-      ctx.beginPath(); ctx.arc(cx, cy, 17, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#2f3640'; ctx.lineWidth = 2; ctx.stroke();
-      const fleckColors = {
-        [OBJ.COAL_ORE]: '#1e272e',
-        [OBJ.IRON_ORE]: '#e17055',
-        [OBJ.GOLD_ORE]: '#ffd32a',
-        [OBJ.DIAMOND_ORE]: '#00d2d3',
-        [OBJ.QUARTZ_ORE]: '#ffffff',
-        [OBJ.ANCIENT_DEBRIS]: '#d35400'
-      };
-      if (fleckColors[obj]) {
-        ctx.fillStyle = fleckColors[obj];
-        ctx.fillRect(cx - 8, cy - 6, 6, 5);
-        ctx.fillRect(cx + 3, cy + 2, 6, 5);
-      }
-    } else if (obj === OBJ.BERRY_BUSH) {
-      ctx.fillStyle = '#27ae60';
-      ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ff4757';
-      ctx.beginPath(); ctx.arc(cx - 4, cy - 3, 3, 0, Math.PI * 2); ctx.arc(cx + 4, cy + 3, 3, 0, Math.PI * 2); ctx.fill();
-    } else if (obj === OBJ.WALL_WOOD || obj === OBJ.WALL_STONE) {
-      ctx.fillStyle = obj === OBJ.WALL_WOOD ? '#b07d4f' : '#718093';
-      ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      ctx.strokeStyle = obj === OBJ.WALL_WOOD ? '#6f4e37' : '#2f3640';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-    } else if (obj === OBJ.DOOR_WOOD) {
-      ctx.fillStyle = '#cd853f';
-      if (state === 0) ctx.fillRect(px + 4, py + 15, TILE_SIZE - 8, 14);
-      else ctx.fillRect(px + 4, py + 4, 12, TILE_SIZE - 8);
-    } else if (obj === OBJ.FURNACE) {
-      lightSources.push({ x: cx, y: cy, r: 130, warm: true });
-      ctx.fillStyle = '#57606f';
-      ctx.fillRect(px + 4, py + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-      ctx.fillStyle = '#ff6b35';
-      ctx.fillRect(cx - 8, cy + 2, 16, 10);
-    } else if (obj === OBJ.CAMPFIRE) {
-      lightSources.push({ x: cx, y: cy, r: 220, warm: true });
-      ctx.fillStyle = '#ff6b35';
-      ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffd32a';
-      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
-    } else if (obj === OBJ.TORCH) {
-      lightSources.push({ x: cx, y: cy, r: 150, warm: true });
-      ctx.fillStyle = '#ffa502';
-      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
-    } else if (obj === OBJ.BED) {
-      ctx.fillStyle = '#ff4757';
-      ctx.fillRect(px + 6, py + 4, TILE_SIZE - 12, TILE_SIZE - 8);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 8, py + 6, TILE_SIZE - 16, 10);
-    } else if (obj === OBJ.CAVE_DOWN || obj === OBJ.CAVE_UP) {
-      ctx.fillStyle = '#1e272e';
-      ctx.fillRect(px + 6, py + 6, TILE_SIZE - 12, TILE_SIZE - 12);
-      ctx.strokeStyle = '#d4a373';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(px + 8, py + 8, TILE_SIZE - 16, TILE_SIZE - 16);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(obj === OBJ.CAVE_DOWN ? 'CAVE' : 'EXIT', cx, cy + 3);
-    } else if (obj === OBJ.NETHER_PORTAL || obj === OBJ.END_PORTAL) {
-      lightSources.push({ x: cx, y: cy, r: 180, warm: false });
-      ctx.fillStyle = obj === OBJ.NETHER_PORTAL ? '#9b59b6' : '#00cec9';
-      ctx.fillRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 6);
-      ctx.strokeStyle = '#1e272e'; ctx.lineWidth = 4;
-      ctx.strokeRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 6);
-    } else if (obj === OBJ.END_CRYSTAL) {
-      lightSources.push({ x: cx, y: cy, r: 160, warm: false });
-      ctx.fillStyle = '#ff79c6';
-      ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-    } else if (obj === OBJ.SCULK_SENSOR) {
-      ctx.fillStyle = '#00cec9';
-      ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fill();
-    } else if (obj === OBJ.ANCIENT_CHEST) {
-      ctx.fillStyle = '#e1b12c';
-      ctx.fillRect(px + 7, py + 9, TILE_SIZE - 14, TILE_SIZE - 18);
-      ctx.strokeStyle = '#2f3640'; ctx.lineWidth = 2;
-      ctx.strokeRect(px + 7, py + 9, TILE_SIZE - 14, TILE_SIZE - 18);
-    }
-  }
-
-  function drawMob(ctx, m) {
-    const colors = {
-      cow: '#7f5539', pig: '#ffafcc', sheep: '#f8f9fa',
-      zombie: '#2ecc71', skeleton: '#dfe6e9',
-      creeper: m.fuse > 0 && Math.floor(m.fuse * 12) % 2 === 0 ? '#ffffff' : '#27ae60',
-      enderman: '#1e272e', blaze: '#ffa502', piglin: '#e17055',
-      warden: '#0a3d62', ender_dragon: '#2c2c54'
-    };
-    ctx.fillStyle = colors[m.kind] || '#ff6b6b';
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = m.kind === 'warden' ? '#00cec9' : m.kind === 'ender_dragon' ? '#ff79c6' : '#1e272e';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Eyes
-    ctx.fillStyle = m.kind === 'enderman' || m.kind === 'ender_dragon' ? '#ff79c6' :
-                    m.kind === 'warden' ? '#00cec9' : m.hostile ? '#ff4757' : '#1e272e';
-    ctx.fillRect(m.x - 6, m.y - 3, 4, 4);
-    ctx.fillRect(m.x + 2, m.y - 3, 4, 4);
-  }
-
-  function drawPlayer(ctx, activeDef) {
-    ctx.save();
-    ctx.translate(player.x, player.y);
-
-    const swingProg = player.swingTimer > 0 ? 1 - player.swingTimer / player.swingDuration : 0;
-    const handAngle = player.angle + (swingProg > 0 ? Math.sin(swingProg * Math.PI) * 1.3 - 0.5 : 0);
-
-    if (swingProg > 0) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 30, player.angle - 0.7, player.angle + 0.7);
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = '#ffbe76';
-    ctx.beginPath();
-    ctx.arc(Math.cos(handAngle) * 18, Math.sin(handAngle) * 18, 5.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (activeDef) {
-      ctx.font = '17px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(activeDef.icon, Math.cos(handAngle) * 27, Math.sin(handAngle) * 27);
-    }
-
-    ctx.fillStyle = player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0 ? '#ff7675' : '#0984e3';
-    ctx.beginPath();
-    ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = player.armor ? '#ffd32a' : '#1e272e';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    const ex = Math.cos(player.angle) * 6, ey = Math.sin(player.angle) * 6;
-    const pxOff = -Math.sin(player.angle) * 4, pyOff = Math.cos(player.angle) * 4;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(ex + pxOff, ey + pyOff, 2.8, 0, Math.PI * 2);
-    ctx.arc(ex - pxOff, ey - pyOff, 2.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawMinimap(dim) {
-    const scale = miniCanvas.width / WORLD_SIZE;
-    miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
-    for (let y = 0; y < WORLD_SIZE; y++) {
-      for (let x = 0; x < WORLD_SIZE; x++) {
-        const obj = dim.objects[y][x];
-        const t = dim.terrain[y][x];
-        if (obj === OBJ.CAVE_DOWN || obj === OBJ.CAVE_UP) miniCtx.fillStyle = '#ff9f43';
-        else if (obj === OBJ.NETHER_PORTAL || obj === OBJ.END_PORTAL) miniCtx.fillStyle = '#ff79c6';
-        else if (obj === OBJ.WALL_WOOD || obj === OBJ.WALL_STONE) miniCtx.fillStyle = '#ffeaa7';
-        else if (t === TERRAIN.WATER) miniCtx.fillStyle = '#2bcbba';
-        else if (t === TERRAIN.LAVA) miniCtx.fillStyle = '#ff5252';
-        else if (t === TERRAIN.SAND) miniCtx.fillStyle = '#f7d794';
-        else if (t === TERRAIN.SNOW) miniCtx.fillStyle = '#ffffff';
-        else if (t === TERRAIN.SCULK) miniCtx.fillStyle = '#00cec9';
-        else if (t === TERRAIN.NETHERRACK) miniCtx.fillStyle = '#833471';
-        else if (t === TERRAIN.END_STONE) miniCtx.fillStyle = '#f8efba';
-        else if (t === TERRAIN.VOID) miniCtx.fillStyle = '#0b0c10';
-        else miniCtx.fillStyle = '#58b16d';
-        miniCtx.fillRect(x * scale, y * scale, scale + 0.5, scale + 0.5);
-      }
-    }
-    miniCtx.fillStyle = '#ffffff';
-    miniCtx.beginPath();
-    miniCtx.arc((player.x / TILE_SIZE) * scale, (player.y / TILE_SIZE) * scale, 3, 0, Math.PI * 2);
-    miniCtx.fill();
-  }
-
-  // --- MAIN LOOP ---
-  let lastTime = performance.now();
-  function loop(now) {
-    const dt = Math.min(0.05, (now - lastTime) / 1000);
-    lastTime = now;
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-})();
-</script>
+      </div>
+
+      <div class="btn-row" style="margin-top: 14px;">
+        <button class="mc-btn green-btn" id="btn-save-skin">Done &amp; Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GLOBAL OPTIONS / SETTINGS ==================== -->
+  <div id="screen-options" class="menu-screen">
+    <div class="mc-panel wide-panel">
+      <h2 class="panel-header">Options</h2>
+
+      <div class="options-grid">
+        <div class="opt-item">
+          <label>Camera Zoom: <span id="lbl-zoom">100%</span></label>
+          <input type="range" id="opt-zoom" min="70" max="150" value="100" />
+        </div>
+        <div class="opt-item">
+          <label>Brightness: <span id="lbl-brightness">Bright</span></label>
+          <input type="range" id="opt-brightness" min="20" max="100" value="75" />
+        </div>
+        <div class="opt-item">
+          <label>Render Distance: <span id="lbl-render">14 tiles</span></label>
+          <input type="range" id="opt-render" min="8" max="22" value="14" />
+        </div>
+        <div class="opt-item">
+          <label>Master Sound: <span id="lbl-volume">70%</span></label>
+          <input type="range" id="opt-volume" min="0" max="100" value="70" />
+        </div>
+        <button class="mc-btn small-btn" id="btn-opt-minimap">Minimap: ON</button>
+        <button class="mc-btn small-btn" id="btn-opt-coords">Coordinates: ON</button>
+        <button class="mc-btn small-btn" id="btn-opt-lighting">Dynamic Lighting: ON</button>
+        <button class="mc-btn small-btn" id="btn-opt-autosave">Auto-Save: ON</button>
+      </div>
+
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="mc-btn green-btn" id="btn-options-done">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== IN-GAME HUD ==================== -->
+  <div id="hud-layer" class="hidden">
+    <!-- Top-Left Vitals & Info -->
+    <div id="hud-top-left">
+      <div class="hud-bars">
+        <div class="mc-bar-wrap" id="hp-bar-wrap">
+          <div id="hp-fill" class="mc-bar-fill hp"></div>
+          <div class="mc-bar-text"><span>HP</span><span id="hp-text">20 / 20</span></div>
+        </div>
+        <div class="mc-bar-wrap" id="hunger-bar-wrap">
+          <div id="hunger-fill" class="mc-bar-fill hunger"></div>
+          <div class="mc-bar-text"><span>FOOD</span><span id="hunger-text">20 / 20</span></div>
+        </div>
+      </div>
+
+      <div class="hud-pills">
+        <div class="mc-pill" id="hud-dim">Overworld</div>
+        <div class="mc-pill" id="hud-time">Day 1 (Day)</div>
+        <div class="mc-pill" id="hud-armor">Armor: 0%</div>
+        <div class="mc-pill" id="hud-shelter">Outdoors</div>
+      </div>
+
+      <div class="mc-pill" id="hud-coords">XYZ: 30, 30</div>
+      <div id="hud-quest" class="quest-banner">Chop trees, craft tools &amp; shelter, then enter a Cave!</div>
+    </div>
+
+    <!-- Boss Health Bar -->
+    <div id="boss-bar-wrap" class="hidden">
+      <div id="boss-name">ENDER DRAGON</div>
+      <div class="boss-bar-bg"><div id="boss-bar-fill"></div></div>
+    </div>
+
+    <!-- Top-Right Minimap & Action Buttons -->
+    <div id="hud-top-right">
+      <canvas id="minimap" width="132" height="132"></canvas>
+      <div class="hud-quick-btns">
+        <button class="mc-btn mini-btn" id="btn-hud-craft">Craft [E]</button>
+        <button class="mc-btn mini-btn" id="btn-hud-pause">Menu [ESC]</button>
+      </div>
+    </div>
+
+    <!-- Bottom Hotbar -->
+    <div id="hotbar-container">
+      <div id="hotbar-label">Hand</div>
+      <div id="hotbar"></div>
+    </div>
+  </div>
+
+  <!-- ==================== IN-GAME CRAFTING & INVENTORY ==================== -->
+  <div id="modal-craft" class="modal-overlay hidden">
+    <div class="mc-panel wide-panel">
+      <div class="panel-top-row">
+        <h2 class="panel-header" style="margin:0;">Crafting &amp; Inventory</h2>
+        <span id="furnace-badge" class="mc-pill">No Furnace Nearby</span>
+        <button class="mc-btn mini-btn red-btn" id="btn-close-craft">X</button>
+      </div>
+
+      <div class="craft-layout">
+        <div>
+          <div class="tab-bar">
+            <button class="tab-btn active" data-cat="all">All</button>
+            <button class="tab-btn" data-cat="tools">Tools/Gear</button>
+            <button class="tab-btn" data-cat="build">Shelter</button>
+            <button class="tab-btn" data-cat="smelt">Smelt</button>
+            <button class="tab-btn" data-cat="portals">Portals</button>
+            <button class="tab-btn hidden" id="tab-creative" data-cat="creative">Creative</button>
+          </div>
+          <div id="recipe-list" class="recipe-list"></div>
+        </div>
+
+        <div>
+          <div class="sub-header">Backpack (Click to swap with Hotbar)</div>
+          <div id="backpack-grid" class="backpack-grid"></div>
+          <div class="controls-help">
+            <b>Controls:</b><br>
+            • <b>Left-Click:</b> Mine, attack, shoot bow, eat, or place.<br>
+            • <b>Right-Click:</b> Open doors, sleep in bed, enter caves/portals, or pick up placed blocks.<br>
+            • <b>Roofs:</b> Place Roof tiles overhead for the <b>Sheltered</b> healing buff.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== IN-GAME PAUSE & WORLD SETTINGS ==================== -->
+  <div id="modal-pause" class="modal-overlay hidden">
+    <div class="mc-panel">
+      <h2 class="panel-header">Game Menu</h2>
+
+      <div class="menu-stack">
+        <button class="mc-btn green-btn" id="btn-resume">Back to Game</button>
+        <button class="mc-btn" id="btn-pause-options">Video &amp; Audio Options...</button>
+      </div>
+
+      <div class="world-settings-box">
+        <div class="sub-header">World Settings</div>
+        <div class="form-row">
+          <button class="mc-btn small-btn" id="btn-world-diff">Difficulty: Normal</button>
+          <button class="mc-btn small-btn" id="btn-world-mode">Mode: Survival</button>
+        </div>
+        <div class="form-row" style="margin-top:6px;">
+          <button class="mc-btn small-btn" id="btn-world-keepinv">Keep Inv: OFF</button>
+          <button class="mc-btn small-btn" id="btn-world-daycycle">Day Cycle: ON</button>
+        </div>
+        <div class="form-row" style="margin-top:6px;">
+          <button class="mc-btn small-btn" id="btn-set-day">Set Time: Day</button>
+          <button class="mc-btn small-btn" id="btn-set-night">Set Time: Night</button>
+        </div>
+      </div>
+
+      <div class="menu-stack" style="margin-top: 12px;">
+        <button class="mc-btn" id="btn-save-quit">Save and Quit to Title</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DEATH SCREEN ==================== -->
+  <div id="modal-death" class="modal-overlay hidden">
+    <div class="mc-panel" style="text-align:center;">
+      <h2 class="panel-header" style="color:#ff5555;">You Died!</h2>
+      <p id="death-summary" style="margin: 12px 0; font-size: 12px;">Survived 1 Day</p>
+      <div class="menu-stack">
+        <button class="mc-btn green-btn" id="btn-respawn">Respawn</button>
+        <button class="mc-btn" id="btn-death-title">Title Screen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="textures.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>

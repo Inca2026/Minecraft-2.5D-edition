@@ -1,0 +1,682 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  image-rendering: pixelated;
+  font-family: 'Silkscreen', 'Press Start 2P', monospace;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1b221c;
+  color: #ffffff;
+}
+
+canvas {
+  display: block;
+}
+
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  cursor: crosshair;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==================== MINECRAFT BUTTONS & PANELS ==================== */
+.mc-btn {
+  background: #727272;
+  color: #ffffff;
+  border: 2px solid #181818;
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.35), inset -3px -3px 0 rgba(0, 0, 0, 0.45);
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: 2px 2px 0 #262626;
+  cursor: pointer;
+  transition: background 0.08s;
+  text-align: center;
+}
+
+.mc-btn:hover:not(:disabled) {
+  background: #5c8a36;
+  color: #ffffa0;
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.45), inset -3px -3px 0 rgba(20, 45, 10, 0.6);
+}
+
+.mc-btn:active:not(:disabled) {
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.5);
+  transform: translateY(1px);
+}
+
+.mc-btn:disabled {
+  background: #484848;
+  color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+.green-btn {
+  background: #4a7c28;
+}
+
+.red-btn:hover:not(:disabled) {
+  background: #9e2a2b;
+}
+
+.small-btn {
+  padding: 9px 12px;
+  font-size: 11px;
+  width: 100%;
+}
+
+.mini-btn {
+  padding: 7px 10px;
+  font-size: 10px;
+}
+
+.mc-panel {
+  background: rgba(34, 34, 34, 0.94);
+  border: 3px solid #141414;
+  box-shadow: inset 3px 3px 0 #555555, inset -3px -3px 0 #1f1f1f, 0 12px 35px rgba(0, 0, 0, 0.75);
+  padding: 20px;
+  width: 460px;
+  max-width: 94vw;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.wide-panel {
+  width: 740px;
+}
+
+.panel-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 15px;
+  color: #ffea54;
+  text-shadow: 2px 2px 0 #222;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.sub-header {
+  font-size: 11px;
+  color: #ffd32a;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.mc-input {
+  width: 100%;
+  background: #111111;
+  color: #ffffff;
+  border: 2px solid #6b6b6b;
+  padding: 9px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mc-input:focus {
+  border-color: #ffff55;
+}
+
+/* ==================== MENU SCREENS ==================== */
+.menu-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 16, 14, 0.52);
+  padding: 16px;
+}
+
+.menu-screen.active {
+  display: flex;
+}
+
+.title-logo-wrap {
+  position: relative;
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.mc-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(24px, 4.5vw, 44px);
+  color: #e0e0e0;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 0 #555555, 0 7px 0 #1a1a1a, 4px 8px 14px rgba(0, 0, 0, 0.8);
+}
+
+.mc-subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #78e08f;
+  margin-top: 8px;
+  text-shadow: 2px 2px 0 #111;
+}
+
+.splash-text {
+  position: absolute;
+  right: -18px;
+  bottom: -14px;
+  transform: rotate(-14deg);
+  color: #ffff00;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 2px 2px 0 #3f3f00;
+  animation: splashPulse 1.1s infinite alternate ease-in-out;
+}
+
+@keyframes splashPulse {
+  from { transform: rotate(-14deg) scale(0.95); }
+  to { transform: rotate(-14deg) scale(1.08); }
+}
+
+.menu-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 340px;
+  max-width: 90vw;
+}
+
+.menu-footer {
+  position: fixed;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #dcdde1;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ==================== WORLD LIST & FORMS ==================== */
+.world-list {
+  background: #141414;
+  border: 2px solid #555;
+  height: 230px;
+  overflow-y: auto;
+  padding: 6px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.world-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #252525;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.world-item:hover {
+  background: #2f352f;
+}
+
+.world-item.selected {
+  border-color: #ffffff;
+  background: #333c33;
+}
+
+.world-item-title {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.world-item-meta {
+  font-size: 10px;
+  color: #a4b0be;
+  margin-top: 3px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-row .mc-btn {
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 10px;
+  flex: 1;
+}
+
+.form-group label {
+  display: block;
+  font-size: 10px;
+  color: #ced6e0;
+  margin-bottom: 4px;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+/* ==================== SKIN EDITOR & OPTIONS ==================== */
+.skin-editor-grid {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.skin-preview-box {
+  background: #181818;
+  border: 2px solid #555;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.skin-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.preset-chip {
+  background: #3a3a3a;
+  color: #fff;
+  border: 1px solid #777;
+  padding: 4px 6px;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.preset-chip:hover {
+  background: #5c8a36;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.color-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1c1c1c;
+  border: 1px solid #444;
+  padding: 6px 8px;
+  font-size: 10px;
+}
+
+.color-item input[type="color"] {
+  width: 34px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.opt-item {
+  background: #1c1c1c;
+  border: 1px solid #444;
+  padding: 8px 10px;
+  font-size: 10px;
+}
+
+.opt-item input[type="range"] {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* ==================== IN-GAME HUD ==================== */
+#hud-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#hud-top-left {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hud-bars {
+  display: flex;
+  gap: 8px;
+}
+
+.mc-bar-wrap {
+  width: 170px;
+  height: 20px;
+  background: #181818;
+  border: 2px solid #000;
+  position: relative;
+}
+
+.mc-bar-fill {
+  height: 100%;
+  width: 100%;
+  transition: width 0.12s;
+}
+
+.mc-bar-fill.hp {
+  background: #d63031;
+}
+
+.mc-bar-fill.hunger {
+  background: #e67e22;
+}
+
+.mc-bar-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 10px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.hud-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mc-pill {
+  background: rgba(20, 20, 20, 0.82);
+  border: 2px solid #444;
+  padding: 4px 8px;
+  font-size: 10px;
+  width: fit-content;
+}
+
+.quest-banner {
+  background: rgba(20, 20, 20, 0.82);
+  border-left: 3px solid #ffea54;
+  padding: 5px 8px;
+  font-size: 10px;
+  max-width: 340px;
+  color: #f5f6fa;
+}
+
+#boss-bar-wrap {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  text-align: center;
+}
+
+#boss-name {
+  font-size: 11px;
+  color: #ff79c6;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 3px;
+}
+
+.boss-bar-bg {
+  height: 12px;
+  background: #181818;
+  border: 2px solid #000;
+}
+
+#boss-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #be2edd;
+}
+
+#hud-top-right {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+#minimap {
+  border: 3px solid #181818;
+  box-shadow: 0 0 0 2px #555;
+  background: #111;
+}
+
+.hud-quick-btns {
+  display: flex;
+  gap: 5px;
+}
+
+#hotbar-container {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+#hotbar-label {
+  background: rgba(18, 18, 18, 0.8);
+  padding: 3px 8px;
+  font-size: 10px;
+  color: #ffffa0;
+}
+
+#hotbar {
+  display: flex;
+  gap: 3px;
+  background: #373737;
+  padding: 4px;
+  border: 3px solid #181818;
+}
+
+.slot {
+  width: 46px;
+  height: 46px;
+  background: #8b8b8b;
+  border: 2px solid;
+  border-color: #373737 #ffffff #ffffff #373737;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.slot.active {
+  border: 3px solid #ffff55;
+  background: #a0a0a0;
+}
+
+.slot canvas {
+  width: 32px;
+  height: 32px;
+}
+
+.slot-key {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 8px;
+  color: #222;
+}
+
+.slot-count {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ==================== MODALS (CRAFTING, PAUSE, DEATH) ==================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.panel-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.craft-layout {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 14px;
+}
+
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.tab-btn {
+  background: #484848;
+  color: #fff;
+  border: 1px solid #181818;
+  padding: 5px 7px;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: #5c8a36;
+  color: #ffffa0;
+}
+
+.recipe-list {
+  height: 290px;
+  overflow-y: auto;
+  background: #1b1b1b;
+  border: 2px solid #444;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.recipe-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2c2c2c;
+  border: 2px solid #444;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.recipe-card.can-craft {
+  border-color: #5c8a36;
+  background: #263620;
+}
+
+.recipe-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recipe-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recipe-name {
+  font-size: 10px;
+  color: #fff;
+}
+
+.recipe-desc {
+  font-size: 9px;
+  color: #b2bec3;
+}
+
+.recipe-cost {
+  font-size: 9px;
+  text-align: right;
+  color: #ffeaa7;
+}
+
+.backpack-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 46px);
+  gap: 3px;
+  background: #373737;
+  padding: 4px;
+  border: 2px solid #181818;
+  width: fit-content;
+}
+
+.controls-help {
+  margin-top: 10px;
+  background: #1c1c1c;
+  border: 1px solid #444;
+  padding: 8px;
+  font-size: 9px;
+  line-height: 1.5;
+  color: #dfe6e9;
+}
+
+.world-settings-box {
+  margin-top: 12px;
+  background: #1c1c1c;
+  border: 2px solid #444;
+  padding: 10px;
+}
+
+@media (max-width: 720px) {
+  .craft-layout, .skin-editor-grid, .options-grid {
+    grid-template-columns: 1fr;
+  }
+}
